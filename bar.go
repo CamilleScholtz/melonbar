@@ -2,7 +2,6 @@ package main
 
 import (
 	"image"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -17,13 +16,6 @@ import (
 
 // Bar is a struct with information about the bar.
 type Bar struct {
-	// The width and height of the bar.
-	w, h int
-
-	// This is a sum of all of the block widths, used to draw a block
-	// to the right of the last block.
-	xsum int
-
 	// Connection to the X server, the abe window, and the bar image.
 	xu  *xgbutil.XUtil
 	win *xwindow.Window
@@ -32,6 +24,13 @@ type Bar struct {
 	// The font and fontsize that should be used.
 	font     *truetype.Font
 	fontSize float64
+
+	// The width and height of the bar.
+	w, h int
+
+	// This is a sum of all of the block widths, used to draw a block
+	// to the right of the last block.
+	xsum int
 
 	// A map with information about the block, see `Block`.
 	block *sync.Map
@@ -49,9 +48,12 @@ type Block struct {
 	// The x coordinate and width of the bar.
 	x, w int
 
-	// How to align the text, 'l' for left, 'c' for center and 'r' for
-	// right.
+	/// The aligment of the text, this can be `'l'` for left aligment,
+	// `'c'` for center aligment and `'r'` for right aligment.
 	align rune
+
+	// Additional x offset to further tweak the location of the text.
+	xoff int
 
 	// The foreground and background colors.
 	bg, fg xgraphics.BGRA
@@ -64,9 +66,6 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 	error) {
 	bar := new(Bar)
 	var err error
-
-	bar.w = w
-	bar.h = h
 
 	// Connect to X.
 	bar.xu, err = xgbutil.NewConn()
@@ -107,15 +106,18 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 	}
 	bar.fontSize = fontSize
 
+	bar.w = w
+	bar.h = h
+
 	bar.block = new(sync.Map)
 	bar.redraw = make(chan string)
 
 	return bar, nil
 }
 
-func (bar *Bar) initBlock(name string, width int, align rune, txt, bg,
-	fg string) {
-	bar.block.Store(name, &Block{txt, bar.xsum, width, align,
+func (bar *Bar) initBlock(name, txt string, width int, align rune,
+	xoff int, bg, fg string) {
+	bar.block.Store(name, &Block{txt, bar.xsum, width, align, xoff,
 		hexToBGRA(bg), hexToBGRA(fg), bar.img.SubImage(image.Rect(
 			bar.xsum, 0, bar.xsum+width, bar.h)).(*xgraphics.Image)})
 	bar.xsum += width
@@ -142,9 +144,9 @@ func (bar *Bar) updateBlockTxt(name, txt string) {
 	block.txt = txt
 }
 
-func (bar *Bar) draw(name string) {
-	// Needed to prevent a `interface conversion: interface {} is nil,
-	// not *main.Block` panic for some reason...
+func (bar *Bar) draw(name string) error {
+	// Needed to prevent an `interface conversion: interface {} is
+	// nil, not *main.Block` panic for some reason...
 	time.Sleep(time.Nanosecond)
 
 	i, _ := bar.block.Load(name)
@@ -155,27 +157,29 @@ func (bar *Bar) draw(name string) {
 		return block.bg
 	})
 
-	// Calculate the required x for the different aligments.
+	// Calculate the required x coordinate for the different
+	// aligments.
 	var x int
 	switch block.align {
 	case 'l':
-		x = block.x
+		x = block.x + block.xoff
 	case 'c':
 		tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)
-		x = block.x + ((block.w / 2) - (tw / 2))
+		x = block.x + ((block.w / 2) - (tw / 2)) + block.xoff
 	case 'r':
 		tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)
-		x = (block.x + block.w) - tw
+		x = (block.x + block.w) - tw + block.xoff
 	}
 
 	// TODO: Center vertically automatically.
 	// Draw the text.
 	if _, _, err := block.img.Text(x, 6, block.fg, bar.fontSize,
 		bar.font, block.txt); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	block.img.XDraw()
+	return nil
 }
 
 func (bar *Bar) paint() {

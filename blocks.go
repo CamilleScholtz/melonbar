@@ -15,8 +15,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-func (bar *Bar) clockFun(width int, bg, fg string) {
-	bar.initBlock("clock", width, 'c', "?", bg, fg)
+func (bar *Bar) clockFun() {
+	bar.initBlock("clock", "?", 800, 'c', 300, "#445967", "#CCCCCC")
 
 	init := true
 	for {
@@ -33,8 +33,8 @@ func (bar *Bar) clockFun(width int, bg, fg string) {
 	}
 }
 
-func (bar *Bar) musicFun(width int, bg, fg string) {
-	bar.initBlock("music", width, 'r', "?", bg, fg)
+func (bar *Bar) musicFun() error {
+	bar.initBlock("music", "?", 660, 'r', -10, "#3C4F5B", "#CCCCCC")
 
 	watcher, err := mpd.NewWatcher("tcp", ":6600", "", "player")
 	if err != nil {
@@ -82,8 +82,8 @@ func (bar *Bar) musicFun(width int, bg, fg string) {
 	}
 }
 
-func (bar *Bar) todoFun(width int, bg, fg string) {
-	bar.initBlock("todo", width, 'c', "?", bg, fg)
+func (bar *Bar) todoFun() {
+	bar.initBlock("todo", "?", 29, 'c', 0, "#5394C9", "#FFFFFF")
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -123,8 +123,8 @@ func (bar *Bar) todoFun(width int, bg, fg string) {
 	}
 }
 
-func (bar *Bar) weatherFun(width int, bg, fg string) {
-	bar.initBlock("weather", width, 'r', "?", bg, fg)
+func (bar *Bar) weatherFun() {
+	bar.initBlock("weather", "?", 29, 'r', 0, "#5394C9", "#FFFFFF")
 
 	w, err := owm.NewCurrent("C", "en")
 	if err != nil {
@@ -173,8 +173,8 @@ func (bar *Bar) weatherFun(width int, bg, fg string) {
 	}
 }
 
-func (bar *Bar) windowFun(width int, bg, fg string) {
-	bar.initBlock("window", width, 'c', "?", bg, fg)
+func (bar *Bar) windowFun() {
+	bar.initBlock("window", "?", 220, 'c', 0, "#37BF8D", "#FFFFFF")
 
 	init := true
 	var Owin string
@@ -218,11 +218,10 @@ func (bar *Bar) windowFun(width int, bg, fg string) {
 	}
 }
 
-func (bar *Bar) workspaceFun(widthWWW, widthIRC, widthSRC int, bgi,
-	bga, fg string) {
-	bar.initBlock("workspaceWWW", widthWWW, 'c', "www", bgi, fg)
-	bar.initBlock("workspaceIRC", widthIRC, 'c', "irc", bgi, fg)
-	bar.initBlock("workspaceSRC", widthSRC, 'c', "src", bgi, fg)
+func (bar *Bar) workspaceFun() {
+	bar.initBlock("www", "www", 74, 'c', 0, "#5394C9", "#FFFFFF")
+	bar.initBlock("irc", "irc", 67, 'c', 0, "#5394C9", "#FFFFFF")
+	bar.initBlock("src", "src", 70, 'c', 0, "#5394C9", "#FFFFFF")
 
 	init := true
 	var Owsp uint
@@ -258,20 +257,20 @@ func (bar *Bar) workspaceFun(widthWWW, widthIRC, widthSRC int, bgi,
 
 		switch wsp {
 		case 0:
-			bar.updateBlockBg("workspaceWWW", bga)
-			bar.updateBlockBg("workspaceIRC", bgi)
-			bar.updateBlockBg("workspaceSRC", bgi)
+			bar.updateBlockBg("www", "#72A7D3")
+			bar.updateBlockBg("irc", "#5394C9")
+			bar.updateBlockBg("src", "#5394C9")
 		case 1:
-			bar.updateBlockBg("workspaceWWW", bgi)
-			bar.updateBlockBg("workspaceIRC", bga)
-			bar.updateBlockBg("workspaceSRC", bgi)
+			bar.updateBlockBg("www", "#5394C9")
+			bar.updateBlockBg("irc", "#72A7D3")
+			bar.updateBlockBg("src", "#5394C9")
 		case 2:
-			bar.updateBlockBg("workspaceWWW", bgi)
-			bar.updateBlockBg("workspaceIRC", bgi)
-			bar.updateBlockBg("workspaceSRC", bga)
+			bar.updateBlockBg("www", "#5394C9")
+			bar.updateBlockBg("irc", "#5394C9")
+			bar.updateBlockBg("src", "#72A7D3")
 		}
-		bar.redraw <- "workspaceWWW"
-		bar.redraw <- "workspaceIRC"
-		bar.redraw <- "workspaceSRC"
+		bar.redraw <- "www"
+		bar.redraw <- "irc"
+		bar.redraw <- "src"
 	}
 }
