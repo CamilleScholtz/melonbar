@@ -28,8 +28,7 @@ func (bar *Bar) clockFun() {
 		t := time.Now()
 
 		bar.updateBlockTxt("clock", t.Format(
-			"Monday, January 2th 02:04 PM"))
-		bar.redraw <- "clock"
+			"Monday, January 2th 03:04 PM"))
 	}
 }
 
@@ -70,15 +69,12 @@ func (bar *Bar) musicFun() error {
 			continue
 		}
 		var state string
-		if s["state"] == "play" {
-			state = "[playing] "
-		} else {
+		if s["state"] == "pause" {
 			state = "[paused] "
 		}
 
 		bar.updateBlockTxt("music", state+cur["Artist"]+" - "+
 			cur["Title"])
-		bar.redraw <- "music"
 	}
 }
 
@@ -119,7 +115,6 @@ func (bar *Bar) todoFun() {
 		}
 
 		bar.updateBlockTxt("todo", strconv.Itoa(c))
-		bar.redraw <- "todo"
 	}
 }
 
@@ -169,7 +164,6 @@ func (bar *Bar) weatherFun() {
 
 		bar.updateBlockTxt("weather", strconv.FormatFloat(w.Main.Temp,
 			'f', 0, 64)+" °C")
-		bar.redraw <- "weather"
 	}
 }
 
@@ -177,7 +171,6 @@ func (bar *Bar) windowFun() {
 	bar.initBlock("window", "?", 220, 'c', 0, "#37BF8D", "#FFFFFF")
 
 	init := true
-	var Owin string
 	for {
 		if !init {
 			ev, xgbErr := bar.xu.Conn().WaitForEvent()
@@ -202,19 +195,13 @@ func (bar *Bar) windowFun() {
 			log.Print(err)
 			continue
 		}
-
 		win, err := ewmh.WmNameGet(bar.xu, id)
 		if err != nil {
 			log.Print(err)
 			continue
 		}
-		if Owin == win {
-			continue
-		}
-		Owin = win
 
 		bar.updateBlockTxt("window", win)
-		bar.redraw <- "window"
 	}
 }
 
@@ -224,7 +211,6 @@ func (bar *Bar) workspaceFun() {
 	bar.initBlock("src", "src", 70, 'c', 0, "#5394C9", "#FFFFFF")
 
 	init := true
-	var Owsp uint
 	for {
 		if !init {
 			ev, xgbErr := bar.xu.Conn().WaitForEvent()
@@ -250,11 +236,6 @@ func (bar *Bar) workspaceFun() {
 			continue
 		}
 
-		if Owsp == wsp {
-			continue
-		}
-		Owsp = wsp
-
 		switch wsp {
 		case 0:
 			bar.updateBlockBg("www", "#72A7D3")
@@ -269,8 +250,5 @@ func (bar *Bar) workspaceFun() {
 			bar.updateBlockBg("irc", "#5394C9")
 			bar.updateBlockBg("src", "#72A7D3")
 		}
-		bar.redraw <- "www"
-		bar.redraw <- "irc"
-		bar.redraw <- "src"
 	}
 }

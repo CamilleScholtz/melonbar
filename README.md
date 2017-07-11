@@ -19,7 +19,7 @@ Users can modify, configure and create new "blocks" in `blocks.go`.
 and configure the position, width and font of the bar in `main.go`.
 
 
-## CREATING A BLOCK FUNCTIONS
+## CREATING BLOCK FUNCTIONS
 
 On top of each block function you should run `bar.initBlock()`, this
 is where most of the configuration happens. Here is a short
@@ -54,6 +54,7 @@ for {
 		// Things you only want to do after the first loop.
 	}
 	init = false
+
 	...
 ```
 
@@ -75,10 +76,6 @@ When you've gathered all needed information you can:
 * Update the text of the block using `bar.updateBlockTxt()`. Again,
   this function takes two parameters, the second one being the new
   string the block should display.
-
-Agter having ran the required `updateBlock*` functions you must run
-`bar.redraw <- "blockname"`, where blockname is the name of the block
-map key.
 
 
 ## AUTHORS

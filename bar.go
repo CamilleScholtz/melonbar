@@ -72,26 +72,32 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Is this needed when I have a bar?
+
+	// Listen to the root window for events.
 	xwindow.New(bar.xu, bar.xu.RootWin()).Listen(
 		xproto.EventMaskPropertyChange)
 
-	// Crate and map window.
+	// Create a window.
 	bar.win, err = xwindow.Generate(bar.xu)
 	if err != nil {
 		return nil, err
 	}
-	bar.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel|
-		xproto.CwEventMask, 0xEEEEEE, xproto.EventMaskPropertyChange)
+	bar.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel,
+		0x000000)
+
+	// EWMH stuff.
 	if err := ewmh.WmWindowTypeSet(bar.xu, bar.win.Id, []string{
 		"_NET_WM_WINDOW_TYPE_DOCK"}); err != nil {
 		return nil, err
 	}
+
+	// Map window.
 	bar.win.Map()
 
 	// Create bar image.
 	bar.img = xgraphics.New(bar.xu, image.Rect(0, 0, w, h))
 	bar.img.XSurfaceSet(bar.win.Id)
+	bar.img.XDraw()
 
 	// TODO: I don't *really* want to use `ttf` fonts but there
 	// doesn't seem to be any `pcf` Go library at the moment.
@@ -127,21 +133,41 @@ func (bar *Bar) updateBlockBg(name, bg string) {
 	i, _ := bar.block.Load(name)
 	block := i.(*Block)
 
-	block.bg = hexToBGRA(bg)
+	nbg := hexToBGRA(bg)
+	if block.bg == nbg {
+		return
+	}
+
+	block.bg = nbg
+	bar.redraw <- name
+	return
 }
 
 func (bar *Bar) updateBlockFg(name, fg string) {
 	i, _ := bar.block.Load(name)
 	block := i.(*Block)
 
-	block.fg = hexToBGRA(fg)
+	nfg := hexToBGRA(fg)
+	if block.fg == nfg {
+		return
+	}
+
+	block.fg = nfg
+	bar.redraw <- name
+	return
 }
 
 func (bar *Bar) updateBlockTxt(name, txt string) {
 	i, _ := bar.block.Load(name)
 	block := i.(*Block)
 
+	if block.txt == txt {
+		return
+	}
+
 	block.txt = txt
+	bar.redraw <- name
+	return
 }
 
 func (bar *Bar) draw(name string) error {
@@ -153,6 +179,7 @@ func (bar *Bar) draw(name string) error {
 	block := i.(*Block)
 
 	// Color the backround.
+	tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)
 	block.img.For(func(x, y int) xgraphics.BGRA {
 		return block.bg
 	})
@@ -164,10 +191,8 @@ func (bar *Bar) draw(name string) error {
 	case 'l':
 		x = block.x + block.xoff
 	case 'c':
-		tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)
 		x = block.x + ((block.w / 2) - (tw / 2)) + block.xoff
 	case 'r':
-		tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)
 		x = (block.x + block.w) - tw + block.xoff
 	}
 
