@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/BurntSushi/xgb/xproto"
+	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
+	"github.com/BurntSushi/xgbutil/icccm"
+	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xprop"
 	owm "github.com/briandowns/openweathermap"
 	"github.com/fhs/gompd/mpd"
@@ -170,39 +172,33 @@ func (bar *Bar) weatherFun() {
 func (bar *Bar) windowFun() {
 	bar.initBlock("window", "?", 220, 'c', 0, "#37BF8D", "#FFFFFF")
 
-	init := true
-	for {
-		if !init {
-			ev, xgbErr := bar.xu.Conn().WaitForEvent()
-			if xgbErr != nil {
-				log.Print(xgbErr)
-				continue
-			}
-
-			atom, err := xprop.Atm(bar.xu, "_NET_ACTIVE_WINDOW")
-			if ev.(xproto.PropertyNotifyEvent).Atom != atom {
-				continue
-			}
-			if err != nil {
-				log.Print(err)
-				continue
-			}
+	// TODO: I'm not sure how I can use init here?
+	xevent.PropertyNotifyFun(func(xu *xgbutil.XUtil,
+		ev xevent.PropertyNotifyEvent) {
+		atom, err := xprop.Atm(bar.xu, "_NET_ACTIVE_WINDOW")
+		if ev.Atom != atom {
+			return
 		}
-		init = false
+		if err != nil {
+			log.Print(err)
+			return
+		}
 
 		id, err := ewmh.ActiveWindowGet(bar.xu)
 		if err != nil {
 			log.Print(err)
-			continue
+			return
 		}
 		win, err := ewmh.WmNameGet(bar.xu, id)
-		if err != nil {
-			log.Print(err)
-			continue
+		if err != nil || len(win) == 0 {
+			win, err = icccm.WmNameGet(bar.xu, id)
+			if err != nil || len(win) == 0 {
+				win = "?"
+			}
 		}
 
 		bar.updateBlockTxt("window", win)
-	}
+	}).Connect(bar.xu, bar.xu.RootWin())
 }
 
 func (bar *Bar) workspaceFun() {
@@ -210,30 +206,22 @@ func (bar *Bar) workspaceFun() {
 	bar.initBlock("irc", "irc", 67, 'c', 0, "#5394C9", "#FFFFFF")
 	bar.initBlock("src", "src", 70, 'c', 0, "#5394C9", "#FFFFFF")
 
-	init := true
-	for {
-		if !init {
-			ev, xgbErr := bar.xu.Conn().WaitForEvent()
-			if xgbErr != nil {
-				log.Print(xgbErr)
-				continue
-			}
-
-			atom, err := xprop.Atm(bar.xu, "WINDOWCHEF_ACTIVE_GROUPS")
-			if ev.(xproto.PropertyNotifyEvent).Atom != atom {
-				continue
-			}
-			if err != nil {
-				log.Print(err)
-				continue
-			}
+	// TODO: I'm not sure how I can use init here?
+	xevent.PropertyNotifyFun(func(xu *xgbutil.XUtil,
+		ev xevent.PropertyNotifyEvent) {
+		atom, err := xprop.Atm(bar.xu, "_NET_CURRENT_DESKTOP")
+		if ev.Atom != atom {
+			return
 		}
-		init = false
+		if err != nil {
+			log.Print(err)
+			return
+		}
 
 		wsp, err := ewmh.CurrentDesktopGet(bar.xu)
 		if err != nil {
 			log.Print(err)
-			continue
+			return
 		}
 
 		switch wsp {
@@ -250,5 +238,5 @@ func (bar *Bar) workspaceFun() {
 			bar.updateBlockBg("irc", "#5394C9")
 			bar.updateBlockBg("src", "#72A7D3")
 		}
-	}
+	}).Connect(bar.xu, bar.xu.RootWin())
 }

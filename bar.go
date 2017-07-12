@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"os"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
+	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
 )
@@ -72,27 +74,46 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 	if err != nil {
 		return nil, err
 	}
+	go xevent.Main(bar.xu)
 
-	// Listen to the root window for events.
-	xwindow.New(bar.xu, bar.xu.RootWin()).Listen(
-		xproto.EventMaskPropertyChange)
+	// Listen to the root window for property change event, used to
+	// check if the user changed the focused window or active
+	// workspace.
+	if err := xwindow.New(bar.xu, bar.xu.RootWin()).Listen(
+		xproto.EventMaskPropertyChange); err != nil {
+		return nil, err
+	}
 
 	// Create a window.
 	bar.win, err = xwindow.Generate(bar.xu)
 	if err != nil {
 		return nil, err
 	}
-	bar.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel,
-		0x000000)
+	bar.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel|
+		xproto.CwEventMask, 0x000000, xproto.EventMaskPropertyChange)
 
+	// TODO: `WmStateSet` and `WmDesktopSet` are basically here to
+	// keep OpenBox happy, can I somehow remove them and just use
+	// `_NET_WM_WINDOW_TYPE_DOCK`?
 	// EWMH stuff.
 	if err := ewmh.WmWindowTypeSet(bar.xu, bar.win.Id, []string{
 		"_NET_WM_WINDOW_TYPE_DOCK"}); err != nil {
 		return nil, err
 	}
+	if err := ewmh.WmStateSet(bar.xu, bar.win.Id, []string{
+		"_NET_WM_STATE_STICKY"}); err != nil {
+		return nil, err
+	}
+	if err := ewmh.WmDesktopSet(bar.xu, bar.win.Id, ^uint(0)); err != nil {
+		return nil, err
+	}
+	if err := ewmh.WmNameSet(bar.xu, bar.win.Id, "melonbar"); err != nil {
+		return nil, err
+	}
 
 	// Map window.
 	bar.win.Map()
+	bar.win.Move(x, y)
 
 	// Create bar image.
 	bar.img = xgraphics.New(bar.xu, image.Rect(0, 0, w, h))
@@ -178,14 +199,9 @@ func (bar *Bar) draw(name string) error {
 	i, _ := bar.block.Load(name)
 	block := i.(*Block)
 
-	// Color the backround.
-	tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)
-	block.img.For(func(x, y int) xgraphics.BGRA {
-		return block.bg
-	})
-
 	// Calculate the required x coordinate for the different
 	// aligments.
+	tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)
 	var x int
 	switch block.align {
 	case 'l':
@@ -194,7 +210,23 @@ func (bar *Bar) draw(name string) error {
 		x = block.x + ((block.w / 2) - (tw / 2)) + block.xoff
 	case 'r':
 		x = (block.x + block.w) - tw + block.xoff
+	default:
+		return fmt.Errorf("draw %#U: Not a valid aligment rune",
+			block.align)
 	}
+
+	// Color the backround.
+	block.img.For(func(cx, cy int) xgraphics.BGRA {
+		// Hack for music block background.
+		if name == "music" {
+			if cx < x+block.xoff {
+				return hexToBGRA("#445967")
+			}
+			return block.bg
+		}
+
+		return block.bg
+	})
 
 	// TODO: Center vertically automatically.
 	// Draw the text.

@@ -25,8 +25,8 @@ On top of each block function you should run `bar.initBlock()`, this
 is where most of the configuration happens. Here is a short
 explanation of each parameter from left to right:
 
-* The name of the block, this is and gets used as the name
-  of the block map key. (`string`)
+* The name of the block, this is gets used as the name of the block
+  map key. (`string`)
 * The initial string the block should display. (`string`)
 * The width of the block. (`int`)
 * The aligment of the text, this can be `'l'` for left aligment, `'c'`
