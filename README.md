@@ -36,12 +36,20 @@ explanation of each parameter from left to right:
 * The foreground color of the block in hexadecimal. (`string`)
 * The background color of the block in hexadecimal. (`string`)
 
+You can also additionally specify mousebindings using:
+
+```go
+block.actions["buttonN"] = func() {
+	// Do stuff.
+}
+```
+
 
 ---
 
 Everything that should not be ran in a loop should of course be
 specified before the `for` loop. For example setting up a connection
-to mpd.
+to `mpd`.
 
 If you want something to only be done *after* the very first loop - an
 example of this would be not waiting for a workspace chance event, but
@@ -64,18 +72,20 @@ the user changes his workspace for the first time.
 
 ---
 
-When you've gathered all needed information you can:
+When you've gathered all needed information you can update the block
+values using for example `block.bg = value` and running
+`bar.redraw <- block`.
 
-* Update the foreground color of the block using
-  `bar.updateBlockFg()`. This function takes two parameters, the first
-  one being the block map key, and the second one the new string the
-  new foreground color of the block, in hexadecimal.
-* Update the background color of the block using
-  `bar.updateBlockBg()`. This function takes the same parameters as
-  `bar.updateBlockFg()`.
-* Update the text of the block using `bar.updateBlockTxt()`. Again,
-  this function takes two parameters, the second one being the new
-  string the block should display.
+
+## TODO
+
+* Create some kind of easy to use init function for blocks (instead of
+  the `if !init` stuff I use at the moment).
+* Add popups.
+* Drop support for `ttf` fonts and use `pcf` fonts instead if
+  possible.
+* or maybe some kind of different format altogether that's easily
+  hackable, such as suckless farbfeld?
 
 
 ## AUTHORS

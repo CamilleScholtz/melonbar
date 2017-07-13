@@ -18,7 +18,7 @@ func main() {
 	time.Sleep(time.Millisecond)
 
 	go bar.workspaceFun()
-	time.Sleep(time.Millisecond * 3)
+	time.Sleep(time.Millisecond)
 
 	go bar.clockFun()
 	time.Sleep(time.Millisecond)
@@ -30,9 +30,8 @@ func main() {
 	time.Sleep(time.Millisecond)
 
 	for {
-		if err := bar.draw(<-bar.redraw); err != nil {
+		if err := bar.paint(<-bar.redraw); err != nil {
 			log.Fatal(err)
 		}
-		bar.paint()
 	}
 }

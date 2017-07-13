@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"strconv"
 	"sync"
-	"time"
 
 	"github.com/BurntSushi/freetype-go/freetype/truetype"
 	"github.com/BurntSushi/xgb/xproto"
@@ -37,31 +37,9 @@ type Bar struct {
 	// A map with information about the block, see `Block`.
 	block *sync.Map
 
-	// The channel where the block name should be written to once the
-	// block is ready to be redrawn.
-	redraw chan string
-}
-
-// Block is a struct with information about a block.
-type Block struct {
-	// The text the block should display.
-	txt string
-
-	// The x coordinate and width of the bar.
-	x, w int
-
-	/// The aligment of the text, this can be `'l'` for left aligment,
-	// `'c'` for center aligment and `'r'` for right aligment.
-	align rune
-
-	// Additional x offset to further tweak the location of the text.
-	xoff int
-
-	// The foreground and background colors.
-	bg, fg xgraphics.BGRA
-
-	// The sub-image that represents the block.
-	img *xgraphics.Image
+	// The channel where the block name should be send to to once it's
+	// ready to be redrawn.
+	redraw chan *Block
 }
 
 func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
@@ -90,7 +68,7 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 		return nil, err
 	}
 	bar.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel|
-		xproto.CwEventMask, 0x000000, xproto.EventMaskPropertyChange)
+		xproto.CwEventMask, 0x000000, xproto.EventMaskButtonPress)
 
 	// TODO: `WmStateSet` and `WmDesktopSet` are basically here to
 	// keep OpenBox happy, can I somehow remove them and just use
@@ -104,13 +82,16 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 		"_NET_WM_STATE_STICKY"}); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmDesktopSet(bar.xu, bar.win.Id, ^uint(0)); err != nil {
+	if err := ewmh.WmDesktopSet(bar.xu, bar.win.Id, ^uint(0)); err !=
+		nil {
 		return nil, err
 	}
-	if err := ewmh.WmNameSet(bar.xu, bar.win.Id, "melonbar"); err != nil {
+	if err := ewmh.WmNameSet(bar.xu, bar.win.Id, "melonbar"); err !=
+		nil {
 		return nil, err
 	}
 
+	// TODO: Moving the window is again a hack to keep OpenBox happy.
 	// Map window.
 	bar.win.Map()
 	bar.win.Move(x, y)
@@ -137,68 +118,31 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 	bar.h = h
 
 	bar.block = new(sync.Map)
-	bar.redraw = make(chan string)
+	bar.redraw = make(chan *Block)
+
+	// Listen to mouse events and execute requires function.
+	xevent.ButtonPressFun(func(_ *xgbutil.XUtil,
+		ev xevent.ButtonPressEvent) {
+		// Determine what block the cursor is in.
+		var block *Block
+		bar.block.Range(func(val, i interface{}) bool {
+			block = i.(*Block)
+			fmt.Println(val)
+			if ev.EventX > int16(block.x) && ev.EventX < int16(
+				block.x+block.w) {
+				return false
+			}
+			return true
+		})
+
+		// Execute the function as specified.
+		block.actions["button"+strconv.Itoa(int(ev.Detail))]()
+	}).Connect(bar.xu, bar.win.Id)
 
 	return bar, nil
 }
 
-func (bar *Bar) initBlock(name, txt string, width int, align rune,
-	xoff int, bg, fg string) {
-	bar.block.Store(name, &Block{txt, bar.xsum, width, align, xoff,
-		hexToBGRA(bg), hexToBGRA(fg), bar.img.SubImage(image.Rect(
-			bar.xsum, 0, bar.xsum+width, bar.h)).(*xgraphics.Image)})
-	bar.xsum += width
-}
-
-func (bar *Bar) updateBlockBg(name, bg string) {
-	i, _ := bar.block.Load(name)
-	block := i.(*Block)
-
-	nbg := hexToBGRA(bg)
-	if block.bg == nbg {
-		return
-	}
-
-	block.bg = nbg
-	bar.redraw <- name
-	return
-}
-
-func (bar *Bar) updateBlockFg(name, fg string) {
-	i, _ := bar.block.Load(name)
-	block := i.(*Block)
-
-	nfg := hexToBGRA(fg)
-	if block.fg == nfg {
-		return
-	}
-
-	block.fg = nfg
-	bar.redraw <- name
-	return
-}
-
-func (bar *Bar) updateBlockTxt(name, txt string) {
-	i, _ := bar.block.Load(name)
-	block := i.(*Block)
-
-	if block.txt == txt {
-		return
-	}
-
-	block.txt = txt
-	bar.redraw <- name
-	return
-}
-
-func (bar *Bar) draw(name string) error {
-	// Needed to prevent an `interface conversion: interface {} is
-	// nil, not *main.Block` panic for some reason...
-	time.Sleep(time.Nanosecond)
-
-	i, _ := bar.block.Load(name)
-	block := i.(*Block)
-
+func (bar *Bar) paint(block *Block) error {
 	// Calculate the required x coordinate for the different
 	// aligments.
 	tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)
@@ -217,28 +161,26 @@ func (bar *Bar) draw(name string) error {
 
 	// Color the backround.
 	block.img.For(func(cx, cy int) xgraphics.BGRA {
+		// TODO: Should I handle this in `initBlock()`?
 		// Hack for music block background.
-		if name == "music" {
+		if block.w == 660 {
 			if cx < x+block.xoff {
 				return hexToBGRA("#445967")
 			}
-			return block.bg
+			return hexToBGRA(block.bg)
 		}
 
-		return block.bg
+		return hexToBGRA(block.bg)
 	})
 
 	// TODO: Center vertically automatically.
 	// Draw the text.
-	if _, _, err := block.img.Text(x, 6, block.fg, bar.fontSize,
-		bar.font, block.txt); err != nil {
+	if _, _, err := block.img.Text(x, 6, hexToBGRA(block.fg),
+		bar.fontSize, bar.font, block.txt); err != nil {
 		return err
 	}
 
 	block.img.XDraw()
-	return nil
-}
-
-func (bar *Bar) paint() {
 	bar.img.XPaint(bar.win.Id)
+	return nil
 }
