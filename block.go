@@ -15,8 +15,8 @@ type Block struct {
 	x, w int
 
 	/// The aligment of the text, this can be `l` for left aligment,
-	// `c` for center aligment (the default) and `r` for right
-	// aligment.
+	// `c` for center aligment, `r` for right aligment and `a` for
+	// absolute center aligment.
 	align rune
 
 	// Additional x offset to further tweak the location of the text.

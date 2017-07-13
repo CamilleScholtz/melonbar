@@ -124,15 +124,26 @@ func initBar(x, y, w, h int, font string, fsize float64) (*Bar,
 	bar.block = new(sync.Map)
 	bar.redraw = make(chan *Block)
 
-	// Listen to mouse events and execute the requires function.
+	// Listen to mouse events and execute the required function.
 	xevent.ButtonPressFun(func(_ *xgbutil.XUtil,
 		ev xevent.ButtonPressEvent) {
 		// Determine what block the cursor is in.
 		// TODO: This feels a bit slow at the moment, can I improve
 		// it?
 		var block *Block
-		bar.block.Range(func(val, i interface{}) bool {
+		bar.block.Range(func(name, i interface{}) bool {
 			block = i.(*Block)
+			// XXX: Hack for music block.
+			if name == "music" {
+				tw, _ := xgraphics.Extents(bar.font, bar.fsize,
+					block.txt)
+				if ev.EventX > int16(block.x+(block.w-tw+(block.xoff*
+					2))) && ev.EventX < int16(block.x+block.w) {
+					return false
+				}
+				return true
+			}
+
 			if ev.EventX > int16(block.x) && ev.EventX < int16(
 				block.x+block.w) {
 				return false
@@ -150,24 +161,26 @@ func initBar(x, y, w, h int, font string, fsize float64) (*Bar,
 func (bar *Bar) draw(block *Block) error {
 	// Calculate the required x coordinate for the different
 	// aligments.
-	tw, th := xgraphics.Extents(bar.font, bar.fsize, block.txt)
+	tw, _ := xgraphics.Extents(bar.font, bar.fsize, block.txt)
 	var x int
 	switch block.align {
 	case 'l':
-		x = block.x + block.xoff
+		x = block.x
 	case 'c':
-		x = block.x + ((block.w / 2) - (tw / 2)) + block.xoff
+		x = block.x + ((block.w / 2) - (tw / 2))
 	case 'r':
-		x = (block.x + block.w) - tw + block.xoff
+		x = (block.x + block.w) - tw
+	case 'a':
+		x = (bar.w / 2) - (tw / 2)
 	default:
 		return fmt.Errorf("draw %#U: Not a valid aligment rune",
 			block.align)
 	}
+	x += block.xoff
 
-	// Color the backround.
+	// Color the background.
 	block.img.For(func(cx, cy int) xgraphics.BGRA {
-		// Hack for music block background.
-		// TODO: I should handle this in `initBlock()`.
+		// XXX: Hack for music block.
 		if block.w == 660 {
 			if cx < x+block.xoff {
 				return hexToBGRA("#445967")
@@ -179,9 +192,9 @@ func (bar *Bar) draw(block *Block) error {
 	})
 
 	// Draw the text.
-	// TODO: Center text vertically a bit more precisely.
-	if _, _, err := block.img.Text(x, (bar.h/2)-(th/2)-2, hexToBGRA(
-		block.fg), bar.fsize, bar.font, block.txt); err != nil {
+	// TODO: Center text vertically automatically.
+	if _, _, err := block.img.Text(x, 6, hexToBGRA(block.fg),
+		bar.fsize, bar.font, block.txt); err != nil {
 		return err
 	}
 

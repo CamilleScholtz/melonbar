@@ -32,7 +32,8 @@ explanation of each parameter from left to right:
 * The initial string the block should display. (`string`)
 * The width of the block. (`int`)
 * The aligment of the text, this can be `'l'` for left aligment, `'c'`
-  for center aligment and `'r'` for right aligment. (`rune`)
+  for center aligment `'r'` for right aligment and `'a'` for absolute
+  center aligment. (`rune`)
 * Additional x offset to further tweak the location of the text.
   (`int`)
 * The foreground color of the block in hexadecimal. (`string`)

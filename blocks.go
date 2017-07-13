@@ -17,7 +17,7 @@ import (
 )
 
 func (bar *Bar) clockFun() {
-	block := bar.initBlock("clock", "?", 800, 'c', 140, "#445967",
+	block := bar.initBlock("clock", "?", 800, 'a', 0, "#445967",
 		"#CCCCCC")
 
 	init := true
