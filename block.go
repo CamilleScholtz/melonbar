@@ -11,7 +11,7 @@ type Block struct {
 	// The text the block should display.
 	txt string
 
-	// The x coordinate and width of the bar.
+	// The x coordinate and width of the block.
 	x, w int
 
 	/// The aligment of the text, this can be `l` for left aligment,
@@ -22,10 +22,11 @@ type Block struct {
 	// Additional x offset to further tweak the location of the text.
 	xoff int
 
-	// The foreground and background colors.
+	// The foreground and background colors in hex.
 	bg, fg string
 
-	// Commands to execute on button events.
+	// A map with functions to execute on button events. Accepted
+	// button strings are `button0` to `button5`
 	actions map[string]func()
 
 	// The sub-image that represents the block.
