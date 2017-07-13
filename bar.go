@@ -127,7 +127,6 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 		var block *Block
 		bar.block.Range(func(val, i interface{}) bool {
 			block = i.(*Block)
-			fmt.Println(val)
 			if ev.EventX > int16(block.x) && ev.EventX < int16(
 				block.x+block.w) {
 				return false
@@ -142,7 +141,7 @@ func initBar(x, y, w, h int, font string, fontSize float64) (*Bar,
 	return bar, nil
 }
 
-func (bar *Bar) paint(block *Block) error {
+func (bar *Bar) draw(block *Block) error {
 	// Calculate the required x coordinate for the different
 	// aligments.
 	tw, _ := xgraphics.Extents(bar.font, bar.fontSize, block.txt)

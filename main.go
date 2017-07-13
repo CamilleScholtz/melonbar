@@ -30,7 +30,7 @@ func main() {
 	time.Sleep(time.Millisecond)
 
 	for {
-		if err := bar.paint(<-bar.redraw); err != nil {
+		if err := bar.draw(<-bar.redraw); err != nil {
 			log.Fatal(err)
 		}
 	}

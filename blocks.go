@@ -259,7 +259,7 @@ func (bar *Bar) workspaceFun() {
 	blockwww := bar.initBlock("www", "www", 74, 'c', 0, "#5394C9",
 		"#FFFFFF")
 	blockwww.actions["button1"] = func() {
-		if err := ewmh.CurrentDesktopReq(bar.xu, 1); err != nil {
+		if err := ewmh.CurrentDesktopReq(bar.xu, 0); err != nil {
 			log.Println(err)
 		}
 	}
@@ -275,7 +275,7 @@ func (bar *Bar) workspaceFun() {
 	blocksrc := bar.initBlock("src", "src", 70, 'c', 0, "#5394C9",
 		"#FFFFFF")
 	blocksrc.actions["button1"] = func() {
-		if err := ewmh.CurrentDesktopReq(bar.xu, 1); err != nil {
+		if err := ewmh.CurrentDesktopReq(bar.xu, 2); err != nil {
 			log.Println(err)
 		}
 	}

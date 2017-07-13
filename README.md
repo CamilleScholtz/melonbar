@@ -2,6 +2,8 @@
 
 melonbar - A concurrent, hackable bar/panel for X written in Go.
 
+![](https://punpun.xyz/54c7.png)
+
 
 ## INSTALLATION
 
