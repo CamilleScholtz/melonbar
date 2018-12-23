@@ -55,8 +55,8 @@ specified before the `for` loop. For example setting up a connection
 to `mpd`.
 
 If you want something to only be done *after* the very first loop - an
-example of this would be not waiting for a workspace chance event, but
-immediately checking the current workspace. - use:
+example of this would be not waiting for a workspace change event, but
+immediately checking the current workspace - use:
 
 ```go
 init := true
@@ -75,8 +75,8 @@ the user changes his workspace for the first time.
 
 ---
 
-When you've gathered all needed information you can update the block
-values using for example `block.bg = value` and running
+When you've gathered all information you can update the block values
+using for example `block.bg = value` and running
 `bar.redraw <- block`.
 
 

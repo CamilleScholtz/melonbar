@@ -23,27 +23,26 @@ type Bar struct {
 	win *xwindow.Window
 	img *xgraphics.Image
 
-	// The font and fontsize that should be used.
-	font  *truetype.Font
-	fsize float64
-
 	// The width and height of the bar.
 	w, h int
 
-	// This is a sum of all of the block widths, used to draw a block
-	// to the right of the last block.
+	// This is a sum of all of the block widths, used to draw a block to the
+	// right of the last block.
 	xsum int
+
+	// The font that should be used.
+	font *truetype.Font
+	size float64
 
 	// A map with information about the block, see the `Block` type.
 	block *sync.Map
 
-	// A channel where the block should be send to to once its ready
-	// to be redrawn.
+	// A channel where the block should be send to to once its ready to be
+	// redrawn.
 	redraw chan *Block
 }
 
-func initBar(x, y, w, h int, font string, fsize float64) (*Bar,
-	error) {
+func initBar(x, y, w, h int, font string, size float64) (*Bar, error) {
 	bar := new(Bar)
 	var err error
 
@@ -56,27 +55,26 @@ func initBar(x, y, w, h int, font string, fsize float64) (*Bar,
 	// Run the main X event loop, this is uses to catch events.
 	go xevent.Main(bar.xu)
 
-	// Listen to the root window for property change events, used to
-	// check if the user changed the focused window or active
-	// workspace for example.
-	if err := xwindow.New(bar.xu, bar.xu.RootWin()).Listen(
-		xproto.EventMaskPropertyChange); err != nil {
+	// Listen to the root window for property change events, used to check if
+	// the user changed the focused window or active workspace for example.
+	if err := xwindow.New(bar.xu, bar.xu.RootWin()).Listen(xproto.
+		EventMaskPropertyChange); err != nil {
 		return nil, err
 	}
 
-	// Create a window for the bar. This window listens to button
-	// press events in order to respond to them.
+	// Create a window for the bar. This window listens to button press events
+	// in order to respond to them.
 	bar.win, err = xwindow.Generate(bar.xu)
 	if err != nil {
 		return nil, err
 	}
-	bar.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel|
-		xproto.CwEventMask, 0x000000, xproto.EventMaskButtonPress)
+	bar.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel|xproto.
+		CwEventMask, 0x000000, xproto.EventMaskButtonPress)
 
-	// EWMH stuff to make the window behave like an actuale bar.
-	// TODO: `WmStateSet` and `WmDesktopSet` are basically here to
-	// keep OpenBox happy, can I somehow remove them and just use
-	// `_NET_WM_WINDOW_TYPE_DOCK` like I can with WindowChef?
+	// EWMH stuff to make the window behave like an actual bar.
+	// XXX: `WmStateSet` and `WmDesktopSet` are basically here to keep OpenBox
+	// happy, can I somehow remove them and just use `_NET_WM_WINDOW_TYPE_DOCK`
+	// like I can with WindowChef?
 	if err := ewmh.WmWindowTypeSet(bar.xu, bar.win.Id, []string{
 		"_NET_WM_WINDOW_TYPE_DOCK"}); err != nil {
 		return nil, err
@@ -85,29 +83,34 @@ func initBar(x, y, w, h int, font string, fsize float64) (*Bar,
 		"_NET_WM_STATE_STICKY"}); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmDesktopSet(bar.xu, bar.win.Id, ^uint(0)); err !=
-		nil {
+	if err := ewmh.WmDesktopSet(bar.xu, bar.win.Id, ^uint(0)); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmNameSet(bar.xu, bar.win.Id, "melonbar"); err !=
-		nil {
+	if err := ewmh.WmNameSet(bar.xu, bar.win.Id, "melonbar"); err != nil {
 		return nil, err
 	}
 
 	// Map window.
 	bar.win.Map()
 
-	// TODO: Moving the window is again a hack to keep OpenBox happy.
+	// XXX: Moving the window is again a hack to keep OpenBox happy.
 	bar.win.Move(x, y)
 
 	// Create the bar image.
 	bar.img = xgraphics.New(bar.xu, image.Rect(0, 0, w, h))
-	bar.img.XSurfaceSet(bar.win.Id)
+	if err := bar.img.XSurfaceSet(bar.win.Id); err != nil {
+		return nil, err
+	}
 	bar.img.XDraw()
 
+	bar.w = w
+	bar.h = h
+
 	// Load font.
-	// TODO: I don't *really* want to use `ttf` fonts but there
-	// doesn't seem to be any `pcf` Go library at the moment.
+	// TODO: I don't *really* want to use `ttf` fonts but there doesn't seem to
+	// be any `pcf` Go library at the moment. I have tried the plan9 fonts,
+	// which do work, but honestly it's a pain in the ass (read: impossible) to
+	// convert muh cure font.
 	f, err := os.Open(font)
 	if err != nil {
 		return nil, err
@@ -116,36 +119,30 @@ func initBar(x, y, w, h int, font string, fsize float64) (*Bar,
 	if err != nil {
 		return nil, err
 	}
-	bar.fsize = fsize
-
-	bar.w = w
-	bar.h = h
+	bar.size = size
 
 	bar.block = new(sync.Map)
 	bar.redraw = make(chan *Block)
 
 	// Listen to mouse events and execute the required function.
-	xevent.ButtonPressFun(func(_ *xgbutil.XUtil,
-		ev xevent.ButtonPressEvent) {
+	xevent.ButtonPressFun(func(_ *xgbutil.XUtil, ev xevent.ButtonPressEvent) {
 		// Determine what block the cursor is in.
-		// TODO: This feels a bit slow at the moment, can I improve
-		// it?
+		// TODO: This feels a bit slow at the moment, can I improve it?
 		var block *Block
 		bar.block.Range(func(name, i interface{}) bool {
 			block = i.(*Block)
 			// XXX: Hack for music block.
 			if name == "music" {
-				tw, _ := xgraphics.Extents(bar.font, bar.fsize,
-					block.txt)
-				if ev.EventX > int16(block.x+(block.w-tw+(block.xoff*
-					2))) && ev.EventX < int16(block.x+block.w) {
+				tw, _ := xgraphics.Extents(bar.font, bar.size, block.txt)
+				if ev.EventX > int16(block.x+(block.w-tw+(block.xoff*2))) && ev.
+					EventX < int16(block.x+block.w) {
 					return false
 				}
 				return true
 			}
 
-			if ev.EventX > int16(block.x) && ev.EventX < int16(
-				block.x+block.w) {
+			if ev.EventX > int16(block.x) && ev.EventX < int16(block.x+block.
+				w) {
 				return false
 			}
 			return true
@@ -159,9 +156,8 @@ func initBar(x, y, w, h int, font string, fsize float64) (*Bar,
 }
 
 func (bar *Bar) draw(block *Block) error {
-	// Calculate the required x coordinate for the different
-	// aligments.
-	tw, _ := xgraphics.Extents(bar.font, bar.fsize, block.txt)
+	// Calculate the required x coordinate for the different aligments.
+	tw, _ := xgraphics.Extents(bar.font, bar.size, block.txt)
 	var x int
 	switch block.align {
 	case 'l':
@@ -173,8 +169,7 @@ func (bar *Bar) draw(block *Block) error {
 	case 'a':
 		x = (bar.w / 2) - (tw / 2)
 	default:
-		return fmt.Errorf("draw %#U: Not a valid aligment rune",
-			block.align)
+		return fmt.Errorf("draw %#U: Not a valid aligment rune", block.align)
 	}
 	x += block.xoff
 
@@ -193,12 +188,13 @@ func (bar *Bar) draw(block *Block) error {
 
 	// Draw the text.
 	// TODO: Center text vertically automatically.
-	if _, _, err := block.img.Text(x, 6, hexToBGRA(block.fg),
-		bar.fsize, bar.font, block.txt); err != nil {
+	if _, _, err := block.img.Text(x, 6, hexToBGRA(block.fg), bar.size, bar.
+		font, block.txt); err != nil {
 		return err
 	}
 
 	block.img.XDraw()
 	bar.img.XPaint(bar.win.Id)
+
 	return nil
 }

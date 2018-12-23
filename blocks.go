@@ -17,8 +17,7 @@ import (
 )
 
 func (bar *Bar) clockFun() {
-	block := bar.initBlock("clock", "?", 800, 'a', 0, "#445967",
-		"#CCCCCC")
+	block := bar.initBlock("clock", "?", 800, 'a', 0, "#445967", "#CCCCCC")
 
 	init := true
 	for {
@@ -38,23 +37,36 @@ func (bar *Bar) clockFun() {
 }
 
 func (bar *Bar) musicFun() error {
-	block := bar.initBlock("music", "?", 660, 'r', -10, "#3C4F5B",
-		"#CCCCCC")
+	block := bar.initBlock("music", "?", 660, 'r', -13, "#3C4F5B", "#CCCCCC")
 
+	block.actions["button1"] = func() {
+		if block.popup == nil {
+			var err error
+			block.popup, err = bar.initPopup(1920-304-29, 29, 304, 148,
+				"#3C4F5B", "#CCCCCC")
+			if err != nil {
+				log.Print(err)
+			}
+
+			//popup.draw()
+		} else {
+			block.popup = block.popup.destroy()
+		}
+	}
 	block.actions["button3"] = func() {
 		conn, err := mpd.Dial("tcp", ":6600")
 		if err != nil {
 			log.Print(err)
 		}
+		defer conn.Close()
 
 		status, err := conn.Status()
 		if err != nil {
 			log.Print(err)
 		}
-		if status["state"] == "pause" {
-			conn.Pause(false)
-		} else {
-			conn.Pause(true)
+
+		if err := conn.Pause(status["state"] != "pause"); err != nil {
+			log.Print(err)
 		}
 	}
 	block.actions["button4"] = func() {
@@ -62,16 +74,22 @@ func (bar *Bar) musicFun() error {
 		if err != nil {
 			log.Print(err)
 		}
+		defer conn.Close()
 
-		conn.Previous()
+		if err := conn.Previous(); err != nil {
+			log.Print(err)
+		}
 	}
 	block.actions["button5"] = func() {
 		conn, err := mpd.Dial("tcp", ":6600")
 		if err != nil {
 			log.Print(err)
 		}
+		defer conn.Close()
 
-		conn.Next()
+		if err := conn.Next(); err != nil {
+			log.Print(err)
+		}
 	}
 
 	watcher, err := mpd.NewWatcher("tcp", ":6600", "", "player")
@@ -87,8 +105,7 @@ func (bar *Bar) musicFun() error {
 		}
 		init = false
 
-		// TODO: Is it maybe possible to not create a new connection
-		// each loop?
+		// TODO: Is it maybe possible to not create a new connection each loop?
 		conn, err = mpd.Dial("tcp", ":6600")
 		if err != nil {
 			log.Print(err)
@@ -106,6 +123,7 @@ func (bar *Bar) musicFun() error {
 			log.Print(err)
 			continue
 		}
+
 		var state string
 		if status["state"] == "pause" {
 			state = "[paused] "
@@ -122,17 +140,16 @@ func (bar *Bar) musicFun() error {
 }
 
 func (bar *Bar) todoFun() {
-	block := bar.initBlock("todo", "?", 29, 'c', 0, "#5394C9",
-		"#FFFFFF")
+	block := bar.initBlock("todo", "?", 29, 'c', 0, "#5394C9", "#FFFFFF")
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := watcher.Add("/home/onodera/todo"); err != nil {
+	if err := watcher.Add("/home/onodera/.todo"); err != nil {
 		log.Fatal(err)
 	}
-	file, err := os.Open("/home/onodera/todo")
+	file, err := os.Open("/home/onodera/.todo")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -218,12 +235,11 @@ func (bar *Bar) weatherFun() {
 */
 
 func (bar *Bar) windowFun() {
-	block := bar.initBlock("window", "?", 220, 'c', 0, "#37BF8D",
-		"#FFFFFF")
+	block := bar.initBlock("window", "?", 220, 'c', 0, "#37BF8D", "#FFFFFF")
 
-	// TODO: I'm not sure how I can use init here?
-	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil,
-		ev xevent.PropertyNotifyEvent) {
+	// TODO: I'm not sure how I can use init (to prevent a black bar) here?
+	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil, ev xevent.
+		PropertyNotifyEvent) {
 		atom, err := xprop.Atm(bar.xu, "_NET_ACTIVE_WINDOW")
 		if ev.Atom != atom {
 			return
@@ -256,34 +272,32 @@ func (bar *Bar) windowFun() {
 }
 
 func (bar *Bar) workspaceFun() {
-	blockwww := bar.initBlock("www", "www", 74, 'c', 0, "#5394C9",
-		"#FFFFFF")
-	blockwww.actions["button1"] = func() {
+	blockWWW := bar.initBlock("www", "www", 74, 'c', 0, "#5394C9", "#FFFFFF")
+	blockWWW.actions["button1"] = func() {
 		if err := ewmh.CurrentDesktopReq(bar.xu, 0); err != nil {
 			log.Println(err)
 		}
 	}
 
-	blockirc := bar.initBlock("irc", "irc", 67, 'c', 0, "#5394C9",
-		"#FFFFFF")
-	blockirc.actions["button1"] = func() {
+	blockIRC := bar.initBlock("irc", "irc", 67, 'c', 0, "#5394C9", "#FFFFFF")
+	blockIRC.actions["button1"] = func() {
 		if err := ewmh.CurrentDesktopReq(bar.xu, 1); err != nil {
 			log.Println(err)
 		}
 	}
 
-	blocksrc := bar.initBlock("src", "src", 70, 'c', 0, "#5394C9",
-		"#FFFFFF")
-	blocksrc.actions["button1"] = func() {
+	blockSRC := bar.initBlock("src", "src", 70, 'c', 0, "#5394C9", "#FFFFFF")
+	blockSRC.actions["button1"] = func() {
 		if err := ewmh.CurrentDesktopReq(bar.xu, 2); err != nil {
 			log.Println(err)
 		}
 	}
 
-	// TODO: I'm not sure how I can use init here?
+	// TODO: I'm not sure how I can use init (to prevent a black bar) here?
 	var owsp uint
-	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil,
-		ev xevent.PropertyNotifyEvent) {
+	var pwsp, nwsp int
+	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil, ev xevent.
+		PropertyNotifyEvent) {
 		atom, err := xprop.Atm(bar.xu, "_NET_CURRENT_DESKTOP")
 		if ev.Atom != atom {
 			return
@@ -298,27 +312,56 @@ func (bar *Bar) workspaceFun() {
 			log.Print(err)
 			return
 		}
+
+		switch wsp {
+		case 0:
+			blockWWW.bg = "#72A7D3"
+			blockIRC.bg = "#5394C9"
+			blockSRC.bg = "#5394C9"
+
+			pwsp = 2
+			nwsp = 1
+		case 1:
+			blockWWW.bg = "#5394C9"
+			blockIRC.bg = "#72A7D3"
+			blockSRC.bg = "#5394C9"
+
+			pwsp = 0
+			nwsp = 2
+		case 2:
+			blockWWW.bg = "#5394C9"
+			blockIRC.bg = "#5394C9"
+			blockSRC.bg = "#72A7D3"
+
+			pwsp = 1
+			nwsp = 0
+		}
+
 		if owsp == wsp {
 			return
 		}
 		owsp = wsp
 
-		switch wsp {
-		case 0:
-			blockwww.bg = "#72A7D3"
-			blockirc.bg = "#5394C9"
-			blocksrc.bg = "#5394C9"
-		case 1:
-			blockwww.bg = "#5394C9"
-			blockirc.bg = "#72A7D3"
-			blocksrc.bg = "#5394C9"
-		case 2:
-			blockwww.bg = "#5394C9"
-			blockirc.bg = "#5394C9"
-			blocksrc.bg = "#72A7D3"
-		}
-		bar.redraw <- blockwww
-		bar.redraw <- blockirc
-		bar.redraw <- blocksrc
+		bar.redraw <- blockWWW
+		bar.redraw <- blockIRC
+		bar.redraw <- blockSRC
 	}).Connect(bar.xu, bar.xu.RootWin())
+
+	prevFun := func() {
+		if err := ewmh.CurrentDesktopReq(bar.xu, pwsp); err != nil {
+			log.Println(err)
+		}
+	}
+	nextFun := func() {
+		if err := ewmh.CurrentDesktopReq(bar.xu, nwsp); err != nil {
+			log.Println(err)
+		}
+	}
+
+	blockWWW.actions["button4"] = prevFun
+	blockWWW.actions["button5"] = nextFun
+	blockIRC.actions["button4"] = prevFun
+	blockIRC.actions["button5"] = nextFun
+	blockSRC.actions["button4"] = prevFun
+	blockSRC.actions["button5"] = nextFun
 }
