@@ -36,10 +36,10 @@ func (bar *Bar) clockFun() {
 	}
 }
 
-func (bar *Bar) musicFun() error {
+func (bar *Bar) musicFun() {
 	block := bar.initBlock("music", "?", 660, 'r', -13, "#3C4F5B", "#CCCCCC")
 
-	block.actions["button1"] = func() {
+	/*block.actions["button1"] = func() {
 		if block.popup == nil {
 			var err error
 			block.popup, err = bar.initPopup(1920-304-29, 29, 304, 148,
@@ -52,7 +52,7 @@ func (bar *Bar) musicFun() error {
 		} else {
 			block.popup = block.popup.destroy()
 		}
-	}
+	}*/
 	block.actions["button3"] = func() {
 		conn, err := mpd.Dial("tcp", ":6600")
 		if err != nil {
@@ -262,6 +262,11 @@ func (bar *Bar) windowFun() {
 				txt = "?"
 			}
 		}
+
+		if len(txt) > 30 {
+			txt = txt[0:30] + "..."
+		}
+
 		if block.txt == txt {
 			return
 		}

@@ -6,27 +6,27 @@ import (
 )
 
 func main() {
-	bar, err := initBar(0, 0, 1920, 29, "/home/onodera/.fonts/cure.tff.bak", 11)
+	bar, err := initBar(0, 0, 1920, 29, "./vendor/font/proggytiny.font")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Run bar block functions. Make sure to sleep a millisecond after
-	// each block, else they won't appear in the right order.
+	// Run bar block functions. Make sure to sleep a millisecond after each
+	// block, else they won't appear in the right order.
 	go bar.windowFun()
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	go bar.workspaceFun()
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	go bar.clockFun()
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	go bar.musicFun()
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	go bar.todoFun()
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	for {
 		if err := bar.draw(<-bar.redraw); err != nil {

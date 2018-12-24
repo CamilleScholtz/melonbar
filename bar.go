@@ -3,17 +3,20 @@ package main
 import (
 	"fmt"
 	"image"
-	"os"
+	"io/ioutil"
+	"path"
 	"strconv"
 	"sync"
 
-	"github.com/BurntSushi/freetype-go/freetype/truetype"
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/plan9font"
+	"golang.org/x/image/math/fixed"
 )
 
 // Bar is a struct with information about the bar.
@@ -31,8 +34,7 @@ type Bar struct {
 	xsum int
 
 	// The font that should be used.
-	font *truetype.Font
-	size float64
+	face font.Face
 
 	// A map with information about the block, see the `Block` type.
 	block *sync.Map
@@ -42,7 +44,7 @@ type Bar struct {
 	redraw chan *Block
 }
 
-func initBar(x, y, w, h int, font string, size float64) (*Bar, error) {
+func initBar(x, y, w, h int, fp string) (*Bar, error) {
 	bar := new(Bar)
 	var err error
 
@@ -107,19 +109,17 @@ func initBar(x, y, w, h int, font string, size float64) (*Bar, error) {
 	bar.h = h
 
 	// Load font.
-	// TODO: I don't *really* want to use `ttf` fonts but there doesn't seem to
-	// be any `pcf` Go library at the moment. I have tried the plan9 fonts,
-	// which do work, but honestly it's a pain in the ass (read: impossible) to
-	// convert muh cure font.
-	f, err := os.Open(font)
+	fr := func(name string) ([]byte, error) {
+		return ioutil.ReadFile(path.Join(path.Dir(fp), name))
+	}
+	fd, err := fr(path.Base(fp))
 	if err != nil {
 		return nil, err
 	}
-	bar.font, err = xgraphics.ParseFont(f)
+	bar.face, err = plan9font.ParseFont(fd, fr)
 	if err != nil {
 		return nil, err
 	}
-	bar.size = size
 
 	bar.block = new(sync.Map)
 	bar.redraw = make(chan *Block)
@@ -133,7 +133,7 @@ func initBar(x, y, w, h int, font string, size float64) (*Bar, error) {
 			block = i.(*Block)
 			// XXX: Hack for music block.
 			if name == "music" {
-				tw, _ := xgraphics.Extents(bar.font, bar.size, block.txt)
+				tw := font.MeasureString(bar.face, block.txt).Ceil()
 				if ev.EventX > int16(block.x+(block.w-tw+(block.xoff*2))) && ev.
 					EventX < int16(block.x+block.w) {
 					return false
@@ -156,9 +156,15 @@ func initBar(x, y, w, h int, font string, size float64) (*Bar, error) {
 }
 
 func (bar *Bar) draw(block *Block) error {
+	d := &font.Drawer{
+		Dst:  block.img,
+		Src:  image.NewUniform(hexToBGRA(block.fg)),
+		Face: bar.face,
+	}
+
 	// Calculate the required x coordinate for the different aligments.
-	tw, _ := xgraphics.Extents(bar.font, bar.size, block.txt)
 	var x int
+	tw := d.MeasureString(block.txt).Ceil()
 	switch block.align {
 	case 'l':
 		x = block.x
@@ -187,12 +193,10 @@ func (bar *Bar) draw(block *Block) error {
 	})
 
 	// Draw the text.
-	// TODO: Center text vertically automatically.
-	if _, _, err := block.img.Text(x, 6, hexToBGRA(block.fg), bar.size, bar.
-		font, block.txt); err != nil {
-		return err
-	}
+	d.Dot = fixed.P(x, bar.face.Metrics().Ascent.Ceil()+9)
+	d.DrawString(block.txt)
 
+	// Redraw the bar.
 	block.img.XDraw()
 	bar.img.XPaint(bar.win.Id)
 
