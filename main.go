@@ -2,7 +2,6 @@ package main
 
 import (
 	"path"
-	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 )
@@ -19,20 +18,14 @@ func main() {
 	}
 
 	// Run bar block functions.
-	runBlock(bar.windowFun)
-	runBlock(bar.workspaceFun)
-	runBlock(bar.clockFun)
-	runBlock(bar.musicFun)
-	runBlock(bar.todoFun)
+	go bar.initBlocks([]func(){
+		bar.windowFun,
+		bar.workspaceFun,
+		bar.clockFun,
+		bar.musicFun,
+		bar.todoFun,
+	})
 
-	for {
-		if err := bar.draw(<-bar.redraw); err != nil {
-			panic(err)
-		}
-	}
-}
-
-func runBlock(f func()) {
-	go f()
-	time.Sleep(time.Millisecond * 10)
+	// Listen for redraw events.
+	bar.listen()
 }

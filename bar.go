@@ -42,6 +42,10 @@ type Bar struct {
 	// A channel where the block should be send to to once its ready to be
 	// redrawn.
 	redraw chan *Block
+
+	// A channel where a boolean should be send once a block has initizalized,
+	// notifying that the next block can intialize.
+	ready chan bool
 }
 
 func initBar(x, y, w, h int, fp string) (*Bar, error) {
@@ -201,4 +205,23 @@ func (bar *Bar) draw(block *Block) error {
 	bar.img.XPaint(bar.win.Id)
 
 	return nil
+}
+
+func (bar *Bar) initBlocks(blocks []func()) {
+	bar.ready = make(chan bool)
+
+	for _, f := range blocks {
+		go f()
+		<-bar.ready
+	}
+
+	close(bar.ready)
+}
+
+func (bar *Bar) listen() {
+	for {
+		if err := bar.draw(<-bar.redraw); err != nil {
+			panic(err)
+		}
+	}
 }

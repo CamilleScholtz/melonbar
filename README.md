@@ -56,8 +56,6 @@ example `block.bg = "#FF0000"` or `block.txt = "Hello World!"` and executing
 
 ## TODO
 
-* Create some kind of easy to use init function for blocks (instead of
-  the `if !init` stuff I use at the moment).
 * Add popups.
 
 

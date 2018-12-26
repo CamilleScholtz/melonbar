@@ -63,6 +63,9 @@ func (bar *Bar) initBlock(name, txt string, w int, align rune, xoff int, bg,
 	// Store the block in map.
 	bar.block.Store(name, block)
 
+	// Draw block.
+	bar.redraw <- block
+
 	return block
 }
 
@@ -72,7 +75,6 @@ func (block *Block) diff(txt string) bool {
 	if block.txt == txt {
 		return false
 	}
-
 	block.txt = txt
 	return true
 }

@@ -20,7 +20,9 @@ import (
 func (bar *Bar) clockFun() {
 	// Initialize block.
 	block := bar.initBlock("clock", "?", 800, 'a', 0, "#445967", "#CCCCCC")
-	bar.redraw <- block
+
+	// Notify that the next block can be initialized.
+	bar.ready <- true
 
 	for {
 		// Compose block text.
@@ -39,7 +41,9 @@ func (bar *Bar) clockFun() {
 func (bar *Bar) musicFun() {
 	// Initialize block.
 	block := bar.initBlock("music", "»  ", 660, 'r', -12, "#3C4F5B", "#CCCCCC")
-	bar.redraw <- block
+
+	// Notify that the next block can be initialized.
+	bar.ready <- true
 
 	// Connect to MPD.
 	c, err := mpd.Dial("tcp", ":6600")
@@ -62,20 +66,20 @@ func (bar *Bar) musicFun() {
 	}()
 
 	// Show popup on clicking the left mouse button.
-	/*block.actions["button1"] = func() {
+	block.actions["button1"] = func() {
 		if block.popup == nil {
 			var err error
 			block.popup, err = bar.initPopup(1920-304-29, 29, 304, 148,
 				"#3C4F5B", "#CCCCCC")
 			if err != nil {
-				log.Print(err)
+				panic(err)
 			}
 
 			//popup.draw()
 		} else {
 			block.popup = block.popup.destroy()
 		}
-	}*/
+	}
 
 	// Toggle play/pause on clicking the right mouse button.
 	block.actions["button3"] = func() {
@@ -138,7 +142,9 @@ func (bar *Bar) musicFun() {
 func (bar *Bar) todoFun() {
 	// Initialize block.
 	block := bar.initBlock("todo", "¢", 29, 'c', 0, "#5394C9", "#FFFFFF")
-	bar.redraw <- block
+
+	// Notify that the next block can be initialized.
+	bar.ready <- true
 
 	// Find `.todo` file.
 	hd, err := homedir.Dir()
@@ -192,10 +198,11 @@ func (bar *Bar) todoFun() {
 
 func (bar *Bar) windowFun() {
 	// Initialize blocks.
-	blockIcon := bar.initBlock("window", "º", 21, 'l', 12, "#37BF8D", "#FFFFFF")
+	bar.initBlock("window", "º", 21, 'l', 12, "#37BF8D", "#FFFFFF")
 	block := bar.initBlock("window", "?", 200, 'c', 0, "#37BF8D", "#FFFFFF")
-	bar.redraw <- blockIcon
-	bar.redraw <- block
+
+	// Notify that the next block can be initialized.
+	bar.ready <- true
 
 	// TODO: This doesn't check for window title changes.
 	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil, ev xevent.
@@ -245,9 +252,9 @@ func (bar *Bar) workspaceFun() {
 		"#FFFFFF")
 	blockSRC := bar.initBlock("src", "¾      src", 70, 'l', 10, "#5394C9",
 		"#FFFFFF")
-	bar.redraw <- blockWWW
-	bar.redraw <- blockIRC
-	bar.redraw <- blockSRC
+
+	// Notify that the next block can be initialized.
+	bar.ready <- true
 
 	// Change active workspace on clicking on one of the blocks.
 	blockWWW.actions["button1"] = func() {
