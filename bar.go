@@ -193,7 +193,7 @@ func (bar *Bar) draw(block *Block) error {
 	})
 
 	// Draw the text.
-	d.Dot = fixed.P(x, bar.face.Metrics().Ascent.Ceil()+9)
+	d.Dot = fixed.P(x, 18)
 	d.DrawString(block.txt)
 
 	// Redraw the bar.

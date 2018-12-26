@@ -226,8 +226,8 @@ func (bar *Bar) windowFun() {
 				txt = "?"
 			}
 		}
-		if len(txt) > 38 {
-			txt = txt[0:38] + "..."
+		if len(txt) > 34 {
+			txt = txt[0:34] + "..."
 		}
 
 		// Redraw block.

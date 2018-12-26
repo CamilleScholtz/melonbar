@@ -1,9 +1,19 @@
 package main
 
-import "time"
+import (
+	"path"
+	"time"
+
+	homedir "github.com/mitchellh/go-homedir"
+)
 
 func main() {
-	bar, err := initBar(0, 0, 1920, 29, "./vendor/font/cure.font")
+	hd, err := homedir.Dir()
+	if err != nil {
+		panic(err)
+	}
+
+	bar, err := initBar(0, 0, 1920, 29, path.Join(hd, ".fonts/plan9/cure.font"))
 	if err != nil {
 		panic(err)
 	}

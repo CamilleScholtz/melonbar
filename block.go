@@ -41,17 +41,12 @@ func (bar *Bar) initBlock(name, txt string, w int, align rune, xoff int, bg,
 	block := new(Block)
 
 	block.txt = txt
-
 	block.x = bar.xsum
 	block.w = w
-
 	block.align = align
-
 	block.xoff = xoff
-
 	block.bg = bg
 	block.fg = fg
-
 	block.actions = map[string]func(){
 		"button1": func() {},
 		"button2": func() {},
@@ -59,7 +54,6 @@ func (bar *Bar) initBlock(name, txt string, w int, align rune, xoff int, bg,
 		"button4": func() {},
 		"button5": func() {},
 	}
-
 	block.img = bar.img.SubImage(image.Rect(bar.xsum, 0, bar.xsum+w, bar.
 		h)).(*xgraphics.Image)
 
