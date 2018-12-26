@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -37,7 +36,7 @@ func (bar *Bar) clockFun() {
 }
 
 func (bar *Bar) musicFun() {
-	block := bar.initBlock("music", "?", 660, 'r', -13, "#3C4F5B", "#CCCCCC")
+	block := bar.initBlock("music", "?", 660, 'r', -12, "#3C4F5B", "#CCCCCC")
 
 	/*block.actions["button1"] = func() {
 		if block.popup == nil {
@@ -56,45 +55,45 @@ func (bar *Bar) musicFun() {
 	block.actions["button3"] = func() {
 		conn, err := mpd.Dial("tcp", ":6600")
 		if err != nil {
-			log.Print(err)
+			panic(err)
 		}
 		defer conn.Close()
 
 		status, err := conn.Status()
 		if err != nil {
-			log.Print(err)
+			panic(err)
 		}
 
 		if err := conn.Pause(status["state"] != "pause"); err != nil {
-			log.Print(err)
+			panic(err)
 		}
 	}
 	block.actions["button4"] = func() {
 		conn, err := mpd.Dial("tcp", ":6600")
 		if err != nil {
-			log.Print(err)
+			panic(err)
 		}
 		defer conn.Close()
 
 		if err := conn.Previous(); err != nil {
-			log.Print(err)
+			panic(err)
 		}
 	}
 	block.actions["button5"] = func() {
 		conn, err := mpd.Dial("tcp", ":6600")
 		if err != nil {
-			log.Print(err)
+			panic(err)
 		}
 		defer conn.Close()
 
 		if err := conn.Next(); err != nil {
-			log.Print(err)
+			panic(err)
 		}
 	}
 
 	watcher, err := mpd.NewWatcher("tcp", ":6600", "", "player")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	var conn *mpd.Client
 	init := true
@@ -108,20 +107,17 @@ func (bar *Bar) musicFun() {
 		// TODO: Is it maybe possible to not create a new connection each loop?
 		conn, err = mpd.Dial("tcp", ":6600")
 		if err != nil {
-			log.Print(err)
-			continue
+			panic(err)
 		}
 
 		cur, err := conn.CurrentSong()
 		if err != nil {
-			log.Print(err)
-			continue
+			panic(err)
 		}
 
 		status, err := conn.Status()
 		if err != nil {
-			log.Print(err)
-			continue
+			panic(err)
 		}
 
 		var state string
@@ -129,7 +125,7 @@ func (bar *Bar) musicFun() {
 			state = "[paused] "
 		}
 
-		txt := state + cur["Artist"] + " - " + cur["Title"]
+		txt := "»      " + state + cur["Artist"] + " - " + cur["Title"]
 		if block.txt == txt {
 			continue
 		}
@@ -144,14 +140,14 @@ func (bar *Bar) todoFun() {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	if err := watcher.Add("/home/onodera/.todo"); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	file, err := os.Open("/home/onodera/.todo")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	init := true
 	for {
@@ -170,11 +166,10 @@ func (bar *Bar) todoFun() {
 			c++
 		}
 		if _, err := file.Seek(0, 0); err != nil {
-			log.Print(err)
-			continue
+			panic(err)
 		}
 
-		txt := strconv.Itoa(c)
+		txt := "¢ " + strconv.Itoa(c)
 		if block.txt == txt {
 			continue
 		}
@@ -235,23 +230,26 @@ func (bar *Bar) weatherFun() {
 */
 
 func (bar *Bar) windowFun() {
-	block := bar.initBlock("window", "?", 220, 'c', 0, "#37BF8D", "#FFFFFF")
+	blockIcon := bar.initBlock("window", "º", 21, 'l', 12, "#37BF8D", "#FFFFFF")
+	block := bar.initBlock("window", "?", 200, 'c', 0, "#37BF8D", "#FFFFFF")
 
 	// TODO: I'm not sure how I can use init (to prevent a black bar) here?
+	// TODO: This doesn't check for window title changes.
 	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil, ev xevent.
 		PropertyNotifyEvent) {
 		atom, err := xprop.Atm(bar.xu, "_NET_ACTIVE_WINDOW")
-		if ev.Atom != atom {
-			return
-		}
 		if err != nil {
-			log.Print(err)
+			panic(err)
+		}
+		if ev.Atom != atom {
 			return
 		}
 
 		id, err := ewmh.ActiveWindowGet(bar.xu)
 		if err != nil {
-			log.Print(err)
+			panic(err)
+		}
+		if id == 0 {
 			return
 		}
 
@@ -262,11 +260,9 @@ func (bar *Bar) windowFun() {
 				txt = "?"
 			}
 		}
-
-		if len(txt) > 30 {
-			txt = txt[0:30] + "..."
+		if len(txt) > 38 {
+			txt = txt[0:38] + "..."
 		}
-
 		if block.txt == txt {
 			return
 		}
@@ -274,27 +270,32 @@ func (bar *Bar) windowFun() {
 		block.txt = txt
 		bar.redraw <- block
 	}).Connect(bar.xu, bar.xu.RootWin())
+
+	bar.redraw <- blockIcon
 }
 
 func (bar *Bar) workspaceFun() {
-	blockWWW := bar.initBlock("www", "www", 74, 'c', 0, "#5394C9", "#FFFFFF")
+	blockWWW := bar.initBlock("www", "¼      www", 74, 'l', 10, "#5394C9",
+		"#FFFFFF")
 	blockWWW.actions["button1"] = func() {
 		if err := ewmh.CurrentDesktopReq(bar.xu, 0); err != nil {
-			log.Println(err)
+			panic(err)
 		}
 	}
 
-	blockIRC := bar.initBlock("irc", "irc", 67, 'c', 0, "#5394C9", "#FFFFFF")
+	blockIRC := bar.initBlock("irc", "½      irc", 67, 'l', 10, "#5394C9",
+		"#FFFFFF")
 	blockIRC.actions["button1"] = func() {
 		if err := ewmh.CurrentDesktopReq(bar.xu, 1); err != nil {
-			log.Println(err)
+			panic(err)
 		}
 	}
 
-	blockSRC := bar.initBlock("src", "src", 70, 'c', 0, "#5394C9", "#FFFFFF")
+	blockSRC := bar.initBlock("src", "¾      src", 70, 'l', 10, "#5394C9",
+		"#FFFFFF")
 	blockSRC.actions["button1"] = func() {
 		if err := ewmh.CurrentDesktopReq(bar.xu, 2); err != nil {
-			log.Println(err)
+			panic(err)
 		}
 	}
 
@@ -304,18 +305,16 @@ func (bar *Bar) workspaceFun() {
 	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil, ev xevent.
 		PropertyNotifyEvent) {
 		atom, err := xprop.Atm(bar.xu, "_NET_CURRENT_DESKTOP")
-		if ev.Atom != atom {
-			return
-		}
 		if err != nil {
-			log.Print(err)
+			panic(err)
+		}
+		if ev.Atom != atom {
 			return
 		}
 
 		wsp, err := ewmh.CurrentDesktopGet(bar.xu)
 		if err != nil {
-			log.Print(err)
-			return
+			panic(err)
 		}
 
 		switch wsp {
@@ -354,12 +353,12 @@ func (bar *Bar) workspaceFun() {
 
 	prevFun := func() {
 		if err := ewmh.CurrentDesktopReq(bar.xu, pwsp); err != nil {
-			log.Println(err)
+			panic(err)
 		}
 	}
 	nextFun := func() {
 		if err := ewmh.CurrentDesktopReq(bar.xu, nwsp); err != nil {
-			log.Println(err)
+			panic(err)
 		}
 	}
 

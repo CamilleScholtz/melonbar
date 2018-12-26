@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	bar, err := initBar(0, 0, 1920, 29, "./vendor/font/proggytiny.font")
+	bar, err := initBar(0, 0, 1920, 29, "./vendor/font/cure.font")
 	if err != nil {
 		log.Fatal(err)
 	}
