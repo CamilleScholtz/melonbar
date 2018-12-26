@@ -71,3 +71,14 @@ func (bar *Bar) initBlock(name, txt string, w int, align rune, xoff int, bg,
 
 	return block
 }
+
+// TODO: Make this function more versatile by allowing different and multiple
+// properties to be checked.
+func (block *Block) diff(txt string) bool {
+	if block.txt == txt {
+		return false
+	}
+
+	block.txt = txt
+	return true
+}

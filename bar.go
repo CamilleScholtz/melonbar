@@ -54,7 +54,7 @@ func initBar(x, y, w, h int, fp string) (*Bar, error) {
 		return nil, err
 	}
 
-	// Run the main X event loop, this is uses to catch events.
+	// Run the main X event loop, this is used to catch events.
 	go xevent.Main(bar.xu)
 
 	// Listen to the root window for property change events, used to check if
