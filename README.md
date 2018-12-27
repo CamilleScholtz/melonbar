@@ -9,7 +9,11 @@ melonbar - A concurrent, hackable bar/panel for X written in Go.
 
 `go get github.com/onodera-punpun/melonbar`
 
-`melonbar` depends on Go 1.9 or newer.
+Or for a binary that includes embedded static files:
+
+`packr2 get github.com/onodera-punpun/melonbar`
+
+`melonbar` depends on Go 1.9 or newer and [packr2](https://github.com/gobuffalo/packr/tree/master/v2).
 
 
 ## USAGE

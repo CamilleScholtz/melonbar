@@ -10,6 +10,7 @@ import (
 
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/fhs/gompd/mpd"
+	"github.com/rkoesters/xdg/userdirs"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
@@ -45,7 +46,7 @@ func (popup *Popup) music(c *mpd.Client) error {
 
 	// Find album art.
 	var f interface{}
-	f, err = os.Open(path.Join("/home/onodera/media/music/", path.Dir(
+	f, err = os.Open(path.Join(userdirs.Music, path.Dir(
 		cur["file"]), "cover_popup.png"))
 	if err != nil {
 		f, err = box.Open("images/cover.png")

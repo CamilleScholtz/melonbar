@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"path"
 	"strconv"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/BurntSushi/xgbutil/xprop"
 	"github.com/fhs/gompd/mpd"
 	"github.com/fsnotify/fsnotify"
+	"github.com/rkoesters/xdg/basedir"
 )
 
 func (bar *Bar) clock() {
@@ -150,10 +152,10 @@ func (bar *Bar) todo() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	if err := w.Add("/home/onodera/.todo"); err != nil {
+	if err := w.Add(path.Join(basedir.Home, ".todo")); err != nil {
 		log.Fatalln(err)
 	}
-	f, err := os.Open("/home/onodera/.todo")
+	f, err := os.Open(path.Join(basedir.Home, ".todo"))
 	if err != nil {
 		log.Fatalln(err)
 	}
