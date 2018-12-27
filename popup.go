@@ -26,35 +26,35 @@ type Popup struct {
 	redraw chan *Popup
 }
 
-func (bar *Bar) initPopup(x, y, w, h int, bg, fg string) (*Popup, error) {
+func initPopup(x, y, w, h int, bg, fg string) (*Popup, error) {
 	popup := new(Popup)
 	var err error
 
 	// Create a window for the bar. This window listens to button press events
 	// in order to respond to them.
-	popup.win, err = xwindow.Generate(bar.xu)
+	popup.win, err = xwindow.Generate(X)
 	if err != nil {
 		return nil, err
 	}
-	popup.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel|xproto.
+	popup.win.Create(X.RootWin(), x, y, w, h, xproto.CwBackPixel|xproto.
 		CwEventMask, 0x000000, xproto.EventMaskButtonPress)
 
 	// EWMH stuff.
 	// TODO: `WmStateSet` and `WmDesktopSet` are basically here to keep OpenBox
 	// happy, can I somehow remove them and just use `_NET_WM_WINDOW_TYPE_DOCK`
 	// like I can with WindowChef?
-	if err := ewmh.WmWindowTypeSet(bar.xu, popup.win.Id, []string{
+	if err := ewmh.WmWindowTypeSet(X, popup.win.Id, []string{
 		"_NET_WM_WINDOW_TYPE_DOCK"}); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmStateSet(bar.xu, popup.win.Id, []string{
+	if err := ewmh.WmStateSet(X, popup.win.Id, []string{
 		"_NET_WM_STATE_STICKY"}); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmDesktopSet(bar.xu, popup.win.Id, ^uint(0)); err != nil {
+	if err := ewmh.WmDesktopSet(X, popup.win.Id, ^uint(0)); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmNameSet(bar.xu, popup.win.Id, "melonbar"); err != nil {
+	if err := ewmh.WmNameSet(X, popup.win.Id, "melonbar"); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +65,7 @@ func (bar *Bar) initPopup(x, y, w, h int, bg, fg string) (*Popup, error) {
 	popup.win.Move(x, y)
 
 	// Create the bar image.
-	popup.img = xgraphics.New(bar.xu, image.Rect(0, 0, w, h))
+	popup.img = xgraphics.New(X, image.Rect(0, 0, w, h))
 	if err := popup.img.XSurfaceSet(popup.win.Id); err != nil {
 		panic(err)
 	}
@@ -82,16 +82,12 @@ func (bar *Bar) initPopup(x, y, w, h int, bg, fg string) (*Popup, error) {
 	return popup, nil
 }
 
-//func (popup *Popup) draw() error {
-
-//}
-
 // TODO: I don't know if this actually frees memory and shit.
 func (popup *Popup) destroy() *Popup {
 	popup.win.Destroy()
 	popup.img.Destroy()
-
 	close(popup.redraw)
+	popup = nil
 
-	return nil
+	return popup
 }

@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
-	"io/ioutil"
-	"path"
+	"log"
 	"strconv"
 	"sync"
 
@@ -15,14 +14,12 @@ import (
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/plan9font"
 	"golang.org/x/image/math/fixed"
 )
 
 // Bar is a struct with information about the bar.
 type Bar struct {
-	// Connection to the X server, the bar window, and the bar image.
-	xu  *xgbutil.XUtil
+	// Bar window, and bar image.
 	win *xwindow.Window
 	img *xgraphics.Image
 
@@ -33,11 +30,8 @@ type Bar struct {
 	// right of the last block.
 	xsum int
 
-	// The font that should be used.
-	face font.Face
-
 	// A map with information about the block, see the `Block` type.
-	block *sync.Map
+	blocks *sync.Map
 
 	// A channel where the block should be send to to once its ready to be
 	// redrawn.
@@ -48,51 +42,35 @@ type Bar struct {
 	ready chan bool
 }
 
-func initBar(x, y, w, h int, fp string) (*Bar, error) {
+func initBar(x, y, w, h int) (*Bar, error) {
 	bar := new(Bar)
 	var err error
 
-	// Set up a connection to the X server.
-	bar.xu, err = xgbutil.NewConn()
-	if err != nil {
-		return nil, err
-	}
-
-	// Run the main X event loop, this is used to catch events.
-	go xevent.Main(bar.xu)
-
-	// Listen to the root window for property change events, used to check if
-	// the user changed the focused window or active workspace for example.
-	if err := xwindow.New(bar.xu, bar.xu.RootWin()).Listen(xproto.
-		EventMaskPropertyChange); err != nil {
-		return nil, err
-	}
-
 	// Create a window for the bar. This window listens to button press events
 	// in order to respond to them.
-	bar.win, err = xwindow.Generate(bar.xu)
+	bar.win, err = xwindow.Generate(X)
 	if err != nil {
 		return nil, err
 	}
-	bar.win.Create(bar.xu.RootWin(), x, y, w, h, xproto.CwBackPixel|xproto.
+	bar.win.Create(X.RootWin(), x, y, w, h, xproto.CwBackPixel|xproto.
 		CwEventMask, 0x000000, xproto.EventMaskButtonPress)
 
 	// EWMH stuff to make the window behave like an actual bar.
 	// XXX: `WmStateSet` and `WmDesktopSet` are basically here to keep OpenBox
 	// happy, can I somehow remove them and just use `_NET_WM_WINDOW_TYPE_DOCK`
 	// like I can with WindowChef?
-	if err := ewmh.WmWindowTypeSet(bar.xu, bar.win.Id, []string{
+	if err := ewmh.WmWindowTypeSet(X, bar.win.Id, []string{
 		"_NET_WM_WINDOW_TYPE_DOCK"}); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmStateSet(bar.xu, bar.win.Id, []string{
+	if err := ewmh.WmStateSet(X, bar.win.Id, []string{
 		"_NET_WM_STATE_STICKY"}); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmDesktopSet(bar.xu, bar.win.Id, ^uint(0)); err != nil {
+	if err := ewmh.WmDesktopSet(X, bar.win.Id, ^uint(0)); err != nil {
 		return nil, err
 	}
-	if err := ewmh.WmNameSet(bar.xu, bar.win.Id, "melonbar"); err != nil {
+	if err := ewmh.WmNameSet(X, bar.win.Id, "melonbar"); err != nil {
 		return nil, err
 	}
 
@@ -103,7 +81,7 @@ func initBar(x, y, w, h int, fp string) (*Bar, error) {
 	bar.win.Move(x, y)
 
 	// Create the bar image.
-	bar.img = xgraphics.New(bar.xu, image.Rect(0, 0, w, h))
+	bar.img = xgraphics.New(X, image.Rect(0, 0, w, h))
 	if err := bar.img.XSurfaceSet(bar.win.Id); err != nil {
 		return nil, err
 	}
@@ -112,49 +90,43 @@ func initBar(x, y, w, h int, fp string) (*Bar, error) {
 	bar.w = w
 	bar.h = h
 
-	// Load font.
-	fr := func(name string) ([]byte, error) {
-		return ioutil.ReadFile(path.Join(path.Dir(fp), name))
-	}
-	fd, err := fr(path.Base(fp))
-	if err != nil {
-		return nil, err
-	}
-	bar.face, err = plan9font.ParseFont(fd, fr)
-	if err != nil {
-		return nil, err
-	}
-
-	bar.block = new(sync.Map)
+	bar.blocks = new(sync.Map)
 	bar.redraw = make(chan *Block)
 
 	// Listen to mouse events and execute the required function.
 	xevent.ButtonPressFun(func(_ *xgbutil.XUtil, ev xevent.ButtonPressEvent) {
 		// Determine what block the cursor is in.
-		// TODO: This feels a bit slow at the moment, can I improve it?
 		var block *Block
-		bar.block.Range(func(name, i interface{}) bool {
+		bar.blocks.Range(func(name, i interface{}) bool {
 			block = i.(*Block)
+
 			// XXX: Hack for music block.
 			if name == "music" {
-				tw := font.MeasureString(bar.face, block.txt).Ceil()
-				if ev.EventX > int16(block.x+(block.w-tw+(block.xoff*2))) && ev.
-					EventX < int16(block.x+block.w) {
+				tw := font.MeasureString(face, block.txt).Ceil()
+				if ev.EventX >= int16(block.x+(block.w-tw+(block.xoff*2))) &&
+					ev.EventX < int16(block.x+block.w) {
 					return false
 				}
+				block = nil
 				return true
 			}
 
-			if ev.EventX > int16(block.x) && ev.EventX < int16(block.x+block.
+			if ev.EventX >= int16(block.x) && ev.EventX < int16(block.x+block.
 				w) {
 				return false
 			}
+			block = nil
 			return true
 		})
 
 		// Execute the function as specified.
-		block.actions["button"+strconv.Itoa(int(ev.Detail))]()
-	}).Connect(bar.xu, bar.win.Id)
+		if block != nil {
+			if err := block.actions["button"+strconv.Itoa(int(ev.
+				Detail))](); err != nil {
+				log.Println(err)
+			}
+		}
+	}).Connect(X, bar.win.Id)
 
 	return bar, nil
 }
@@ -163,7 +135,7 @@ func (bar *Bar) draw(block *Block) error {
 	d := &font.Drawer{
 		Dst:  block.img,
 		Src:  image.NewUniform(hexToBGRA(block.fg)),
-		Face: bar.face,
+		Face: face,
 	}
 
 	// Calculate the required x coordinate for the different aligments.
@@ -221,7 +193,7 @@ func (bar *Bar) initBlocks(blocks []func()) {
 func (bar *Bar) listen() {
 	for {
 		if err := bar.draw(<-bar.redraw); err != nil {
-			panic(err)
+			log.Fatalln(err)
 		}
 	}
 }

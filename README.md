@@ -54,11 +54,6 @@ example `block.bg = "#FF0000"` or `block.txt = "Hello World!"` and executing
 `bar.redraw <- block`.
 
 
-## TODO
-
-* Add popups.
-
-
 ## AUTHORS
 
 Camille Scholtz

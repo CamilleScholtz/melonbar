@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
+	"log"
 	"os"
-	"path"
 	"strconv"
 	"time"
 
@@ -14,12 +14,11 @@ import (
 	"github.com/BurntSushi/xgbutil/xprop"
 	"github.com/fhs/gompd/mpd"
 	"github.com/fsnotify/fsnotify"
-	homedir "github.com/mitchellh/go-homedir"
 )
 
-func (bar *Bar) clockFun() {
+func (bar *Bar) clock() {
 	// Initialize block.
-	block := bar.initBlock("clock", "?", 800, 'a', 0, "#445967", "#CCCCCC")
+	block := bar.initBlock("clock", "?", 799, 'a', 0, "#445967", "#CCCCCC")
 
 	// Notify that the next block can be initialized.
 	bar.ready <- true
@@ -38,7 +37,7 @@ func (bar *Bar) clockFun() {
 	}
 }
 
-func (bar *Bar) musicFun() {
+func (bar *Bar) music() {
 	// Initialize block.
 	block := bar.initBlock("music", "»  ", 660, 'r', -12, "#3C4F5B", "#CCCCCC")
 
@@ -48,7 +47,7 @@ func (bar *Bar) musicFun() {
 	// Connect to MPD.
 	c, err := mpd.Dial("tcp", ":6600")
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	// Keep connection alive by pinging ever 45 seconds.
@@ -59,68 +58,61 @@ func (bar *Bar) musicFun() {
 			if err := c.Ping(); err != nil {
 				c, err = mpd.Dial("tcp", ":6600")
 				if err != nil {
-					panic(err)
+					log.Fatalln(err)
 				}
 			}
 		}
 	}()
 
 	// Show popup on clicking the left mouse button.
-	block.actions["button1"] = func() {
-		if block.popup == nil {
-			var err error
-			block.popup, err = bar.initPopup(1920-304-29, 29, 304, 148,
-				"#3C4F5B", "#CCCCCC")
-			if err != nil {
-				panic(err)
-			}
-
-			//popup.draw()
-		} else {
+	block.actions["button1"] = func() error {
+		if block.popup != nil {
 			block.popup = block.popup.destroy()
+			return nil
 		}
+
+		block.popup, err = initPopup(1920-304-29, 29, 304, 148, "#EEEEEE",
+			"#021B21")
+		if err != nil {
+			return err
+		}
+
+		return block.popup.music(c)
 	}
 
 	// Toggle play/pause on clicking the right mouse button.
-	block.actions["button3"] = func() {
+	block.actions["button3"] = func() error {
 		status, err := c.Status()
 		if err != nil {
-			panic(err)
+			return err
 		}
 
-		if err := c.Pause(status["state"] != "pause"); err != nil {
-			panic(err)
-		}
+		return c.Pause(status["state"] != "pause")
 	}
 
 	// Previous song on scrolling up.
-	block.actions["button4"] = func() {
-		if err := c.Previous(); err != nil {
-			panic(err)
-		}
+	block.actions["button4"] = func() error {
+		return c.Previous()
 	}
 
 	// Next song on on scrolling down..
-	block.actions["button5"] = func() {
-		if err := c.Next(); err != nil {
-			panic(err)
-		}
+	block.actions["button5"] = func() error {
+		return c.Next()
 	}
 
 	// Watch MPD for events.
 	w, err := mpd.NewWatcher("tcp", ":6600", "", "player")
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
-
 	for {
 		cur, err := c.CurrentSong()
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 		sts, err := c.Status()
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 
 		// Compose text.
@@ -133,39 +125,38 @@ func (bar *Bar) musicFun() {
 		// Redraw block.
 		if block.diff(txt) {
 			bar.redraw <- block
+
+			// Redraw popup.
+			if block.popup != nil {
+				if err := block.popup.music(c); err != nil {
+					log.Println(err)
+				}
+			}
 		}
 
 		<-w.Event
 	}
 }
 
-func (bar *Bar) todoFun() {
+func (bar *Bar) todo() {
 	// Initialize block.
 	block := bar.initBlock("todo", "¢", 29, 'c', 0, "#5394C9", "#FFFFFF")
 
 	// Notify that the next block can be initialized.
 	bar.ready <- true
 
-	// Find `.todo` file.
-	hd, err := homedir.Dir()
-	if err != nil {
-		panic(err)
-	}
-	fp := path.Join(hd, ".todo")
-
 	// Watch file for events.
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
-	if err := w.Add(fp); err != nil {
-		panic(err)
+	if err := w.Add("/home/onodera/.todo"); err != nil {
+		log.Fatalln(err)
 	}
-	f, err := os.Open(fp)
+	f, err := os.Open("/home/onodera/.todo")
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
-
 	for {
 		// Count file lines.
 		s := bufio.NewScanner(f)
@@ -177,7 +168,7 @@ func (bar *Bar) todoFun() {
 
 		// Rewind file.
 		if _, err := f.Seek(0, 0); err != nil {
-			panic(err)
+			log.Println(err)
 		}
 
 		// Compose block text.
@@ -196,9 +187,9 @@ func (bar *Bar) todoFun() {
 	}
 }
 
-func (bar *Bar) windowFun() {
+func (bar *Bar) window() {
 	// Initialize blocks.
-	bar.initBlock("window", "º", 21, 'l', 12, "#37BF8D", "#FFFFFF")
+	bar.initBlock("windowIcon", "º", 21, 'l', 12, "#37BF8D", "#FFFFFF")
 	block := bar.initBlock("window", "?", 200, 'c', 0, "#37BF8D", "#FFFFFF")
 
 	// Notify that the next block can be initialized.
@@ -208,27 +199,27 @@ func (bar *Bar) windowFun() {
 	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil, ev xevent.
 		PropertyNotifyEvent) {
 		// Only listen to `_NET_ACTIVE_WINDOW` events.
-		atom, err := xprop.Atm(bar.xu, "_NET_ACTIVE_WINDOW")
+		atom, err := xprop.Atm(X, "_NET_ACTIVE_WINDOW")
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 		if ev.Atom != atom {
 			return
 		}
 
 		// Get active window.
-		id, err := ewmh.ActiveWindowGet(bar.xu)
+		id, err := ewmh.ActiveWindowGet(X)
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 		if id == 0 {
 			return
 		}
 
 		// Compose block text.
-		txt, err := ewmh.WmNameGet(bar.xu, id)
+		txt, err := ewmh.WmNameGet(X, id)
 		if err != nil || len(txt) == 0 {
-			txt, err = icccm.WmNameGet(bar.xu, id)
+			txt, err = icccm.WmNameGet(X, id)
 			if err != nil || len(txt) == 0 {
 				txt = "?"
 			}
@@ -241,10 +232,10 @@ func (bar *Bar) windowFun() {
 		if block.diff(txt) {
 			bar.redraw <- block
 		}
-	}).Connect(bar.xu, bar.xu.RootWin())
+	}).Connect(X, X.RootWin())
 }
 
-func (bar *Bar) workspaceFun() {
+func (bar *Bar) workspace() {
 	// Initialize block.
 	blockWWW := bar.initBlock("www", "¼      www", 74, 'l', 10, "#5394C9",
 		"#FFFFFF")
@@ -257,20 +248,14 @@ func (bar *Bar) workspaceFun() {
 	bar.ready <- true
 
 	// Change active workspace on clicking on one of the blocks.
-	blockWWW.actions["button1"] = func() {
-		if err := ewmh.CurrentDesktopReq(bar.xu, 0); err != nil {
-			panic(err)
-		}
+	blockWWW.actions["button1"] = func() error {
+		return ewmh.CurrentDesktopReq(X, 0)
 	}
-	blockIRC.actions["button1"] = func() {
-		if err := ewmh.CurrentDesktopReq(bar.xu, 1); err != nil {
-			panic(err)
-		}
+	blockIRC.actions["button1"] = func() error {
+		return ewmh.CurrentDesktopReq(X, 1)
 	}
-	blockSRC.actions["button1"] = func() {
-		if err := ewmh.CurrentDesktopReq(bar.xu, 2); err != nil {
-			panic(err)
-		}
+	blockSRC.actions["button1"] = func() error {
+		return ewmh.CurrentDesktopReq(X, 2)
 	}
 
 	var owsp uint
@@ -278,18 +263,18 @@ func (bar *Bar) workspaceFun() {
 	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil, ev xevent.
 		PropertyNotifyEvent) {
 		// Only listen to `_NET_ACTIVE_WINDOW` events.
-		atom, err := xprop.Atm(bar.xu, "_NET_CURRENT_DESKTOP")
+		atom, err := xprop.Atm(X, "_NET_CURRENT_DESKTOP")
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 		if ev.Atom != atom {
 			return
 		}
 
 		// Get the current active desktop.
-		wsp, err := ewmh.CurrentDesktopGet(bar.xu)
+		wsp, err := ewmh.CurrentDesktopGet(X)
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 
 		// Set colors accordingly.
@@ -324,17 +309,13 @@ func (bar *Bar) workspaceFun() {
 
 			owsp = wsp
 		}
-	}).Connect(bar.xu, bar.xu.RootWin())
+	}).Connect(X, X.RootWin())
 
-	prevFun := func() {
-		if err := ewmh.CurrentDesktopReq(bar.xu, pwsp); err != nil {
-			panic(err)
-		}
+	prevFun := func() error {
+		return ewmh.CurrentDesktopReq(X, pwsp)
 	}
-	nextFun := func() {
-		if err := ewmh.CurrentDesktopReq(bar.xu, nwsp); err != nil {
-			panic(err)
-		}
+	nextFun := func() error {
+		return ewmh.CurrentDesktopReq(X, nwsp)
 	}
 
 	blockWWW.actions["button4"] = prevFun
