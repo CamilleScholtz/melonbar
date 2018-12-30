@@ -73,11 +73,11 @@ func initFont() error {
 	fr := func(name string) ([]byte, error) {
 		return box.Find(path.Join("fonts", name))
 	}
-	font, err := box.Find("fonts/cure.font")
+	fp, err := box.Find("fonts/cure.font")
 	if err != nil {
 		return err
 	}
-	face, err = plan9font.ParseFont(font, fr)
+	face, err = plan9font.ParseFont(fp, fr)
 	if err != nil {
 		return err
 	}

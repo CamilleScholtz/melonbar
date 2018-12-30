@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"time"
@@ -24,6 +25,23 @@ func (bar *Bar) clock() {
 
 	// Notify that the next block can be initialized.
 	bar.ready <- true
+
+	// Show popup on clicking the left mouse button.
+	block.actions["button1"] = func() error {
+		if block.popup != nil {
+			block.popup = block.popup.destroy()
+			return nil
+		}
+
+		var err error
+		block.popup, err = initPopup((bar.w/2)-(178/2), 29, 178, 129, "#EEEEEE",
+			"#021B21")
+		if err != nil {
+			return err
+		}
+
+		return block.popup.clock()
+	}
 
 	for {
 		// Compose block text.
@@ -147,6 +165,14 @@ func (bar *Bar) todo() {
 	// Notify that the next block can be initialized.
 	bar.ready <- true
 
+	// Show popup on clicking the left mouse button.
+	block.actions["button1"] = func() error {
+		cmd := exec.Command("st", "micro", "-savecursor", "false", path.Join(
+			basedir.Home, ".todo"))
+		cmd.Stdout = os.Stdout
+		return cmd.Run()
+	}
+
 	// Watch file for events.
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -226,9 +252,7 @@ func (bar *Bar) window() {
 				txt = "?"
 			}
 		}
-		if len(txt) > 34 {
-			txt = txt[0:34] + "..."
-		}
+		txt = trim(txt, 34)
 
 		// Redraw block.
 		if block.diff(txt) {

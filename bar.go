@@ -30,6 +30,9 @@ type Bar struct {
 	// right of the last block.
 	xsum int
 
+	// Text drawer.
+	drawer *font.Drawer
+
 	// A map with information about the block, see the `Block` type.
 	blocks *sync.Map
 
@@ -90,6 +93,11 @@ func initBar(x, y, w, h int) (*Bar, error) {
 	bar.w = w
 	bar.h = h
 
+	bar.drawer = &font.Drawer{
+		Dst:  bar.img,
+		Face: face,
+	}
+
 	bar.blocks = new(sync.Map)
 	bar.redraw = make(chan *Block)
 
@@ -105,6 +113,17 @@ func initBar(x, y, w, h int) (*Bar, error) {
 				tw := font.MeasureString(face, block.txt).Ceil()
 				if ev.EventX >= int16(block.x+(block.w-tw+(block.xoff*2))) &&
 					ev.EventX < int16(block.x+block.w) {
+					return false
+				}
+				block = nil
+				return true
+			}
+
+			// XXX: Hack for clock block.
+			if name == "clock" {
+				tw := bar.drawer.MeasureString(block.txt).Ceil()
+				if ev.EventX >= int16(((bar.w/2)-(tw/2))-13) && ev.
+					EventX < int16(((bar.w/2)+(tw/2))+13) {
 					return false
 				}
 				block = nil
@@ -132,15 +151,9 @@ func initBar(x, y, w, h int) (*Bar, error) {
 }
 
 func (bar *Bar) draw(block *Block) error {
-	d := &font.Drawer{
-		Dst:  block.img,
-		Src:  image.NewUniform(hexToBGRA(block.fg)),
-		Face: face,
-	}
-
 	// Calculate the required x coordinate for the different aligments.
 	var x int
-	tw := d.MeasureString(block.txt).Ceil()
+	tw := bar.drawer.MeasureString(block.txt).Ceil()
 	switch block.align {
 	case 'l':
 		x = block.x
@@ -168,9 +181,12 @@ func (bar *Bar) draw(block *Block) error {
 		return hexToBGRA(block.bg)
 	})
 
+	// Set text color.
+	bar.drawer.Src = image.NewUniform(hexToBGRA(block.fg))
+
 	// Draw the text.
-	d.Dot = fixed.P(x, 18)
-	d.DrawString(block.txt)
+	bar.drawer.Dot = fixed.P(x, 18)
+	bar.drawer.DrawString(block.txt)
 
 	// Redraw the bar.
 	block.img.XDraw()

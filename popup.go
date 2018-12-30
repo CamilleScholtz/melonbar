@@ -7,6 +7,7 @@ import (
 	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
+	"golang.org/x/image/font"
 )
 
 // Popup is a struct with information about the popup.
@@ -21,9 +22,8 @@ type Popup struct {
 	// The foreground and background colors in hex.
 	bg, fg string
 
-	// A channel where the popup should be send to to once its ready
-	// to be redrawn.
-	redraw chan *Popup
+	// Text drawer.
+	drawer *font.Drawer
 }
 
 func initPopup(x, y, w, h int, bg, fg string) (*Popup, error) {
@@ -77,16 +77,31 @@ func initPopup(x, y, w, h int, bg, fg string) (*Popup, error) {
 	popup.bg = bg
 	popup.fg = fg
 
-	popup.redraw = make(chan *Popup)
+	popup.drawer = &font.Drawer{
+		Dst:  popup.img,
+		Face: face,
+	}
+
+	// Color the background.
+	popup.img.For(func(cx, cy int) xgraphics.BGRA {
+		return hexToBGRA(popup.bg)
+	})
+
+	// Draw the popup.
+	popup.draw()
 
 	return popup, nil
+}
+
+func (popup *Popup) draw() {
+	popup.img.XDraw()
+	popup.img.XPaint(popup.win.Id)
 }
 
 // TODO: I don't know if this actually frees memory and shit.
 func (popup *Popup) destroy() *Popup {
 	popup.win.Destroy()
 	popup.img.Destroy()
-	close(popup.redraw)
 	popup = nil
 
 	return popup
