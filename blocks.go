@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"log"
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 	"time"
 
 	"github.com/BurntSushi/xgbutil"
@@ -15,7 +13,6 @@ import (
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xprop"
 	"github.com/fhs/gompd/mpd"
-	"github.com/fsnotify/fsnotify"
 	"github.com/rkoesters/xdg/basedir"
 )
 
@@ -34,8 +31,8 @@ func (bar *Bar) clock() {
 		}
 
 		var err error
-		block.popup, err = initPopup((bar.w/2)-(178/2), 29, 178, 129, "#EEEEEE",
-			"#021B21")
+		block.popup, err = initPopup((bar.w/2)-(178/2), bar.h, 178, 129,
+			"#EEEEEE", "#021B21")
 		if err != nil {
 			return err
 		}
@@ -91,7 +88,7 @@ func (bar *Bar) music() {
 			return nil
 		}
 
-		block.popup, err = initPopup(1920-304-29, 29, 304, 148, "#EEEEEE",
+		block.popup, err = initPopup(bar.w-304-29, bar.h, 304, 148, "#EEEEEE",
 			"#021B21")
 		if err != nil {
 			return err
@@ -160,7 +157,7 @@ func (bar *Bar) music() {
 
 func (bar *Bar) todo() {
 	// Initialize block.
-	block := bar.initBlock("todo", "¢", 29, 'c', 0, "#5394C9", "#FFFFFF")
+	block := bar.initBlock("todo", "¢", bar.h, 'c', 0, "#5394C9", "#FFFFFF")
 
 	// Notify that the next block can be initialized.
 	bar.ready <- true
@@ -173,51 +170,21 @@ func (bar *Bar) todo() {
 		return cmd.Run()
 	}
 
-	// Watch file for events.
-	w, err := fsnotify.NewWatcher()
+	// Show count popup.
+	var err error
+	block.popup, err = initPopup(bar.w-19-16, bar.h-8, 16, 12, "#EB6084",
+		"#FFFFFF")
 	if err != nil {
 		log.Fatalln(err)
 	}
-	if err := w.Add(path.Join(basedir.Home, ".todo")); err != nil {
+	if err := block.popup.todo(); err != nil {
 		log.Fatalln(err)
-	}
-	f, err := os.Open(path.Join(basedir.Home, ".todo"))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	for {
-		// Count file lines.
-		s := bufio.NewScanner(f)
-		s.Split(bufio.ScanLines)
-		var c int
-		for s.Scan() {
-			c++
-		}
-
-		// Rewind file.
-		if _, err := f.Seek(0, 0); err != nil {
-			log.Println(err)
-		}
-
-		// Compose block text.
-		txt := "¢ " + strconv.Itoa(c)
-
-		// Redraw block.
-		if block.diff(txt) {
-			bar.redraw <- block
-		}
-
-		// Listen for next write event.
-		ev := <-w.Events
-		if ev.Op&fsnotify.Write != fsnotify.Write {
-			continue
-		}
 	}
 }
 
 func (bar *Bar) window() {
 	// Initialize blocks.
-	bar.initBlock("windowIcon", "º", 21, 'l', 12, "#37BF8D", "#FFFFFF")
+	bar.initBlock("windowIcon", "¶", 21, 'l', 12, "#37BF8D", "#FFFFFF")
 	block := bar.initBlock("window", "?", 200, 'c', 0, "#37BF8D", "#FFFFFF")
 
 	// Notify that the next block can be initialized.

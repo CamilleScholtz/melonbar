@@ -9,7 +9,6 @@ import (
 
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
-	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
@@ -59,21 +58,7 @@ func initBar(x, y, w, h int) (*Bar, error) {
 		CwEventMask, 0x000000, xproto.EventMaskButtonPress)
 
 	// EWMH stuff to make the window behave like an actual bar.
-	// XXX: `WmStateSet` and `WmDesktopSet` are basically here to keep OpenBox
-	// happy, can I somehow remove them and just use `_NET_WM_WINDOW_TYPE_DOCK`
-	// like I can with WindowChef?
-	if err := ewmh.WmWindowTypeSet(X, bar.win.Id, []string{
-		"_NET_WM_WINDOW_TYPE_DOCK"}); err != nil {
-		return nil, err
-	}
-	if err := ewmh.WmStateSet(X, bar.win.Id, []string{
-		"_NET_WM_STATE_STICKY"}); err != nil {
-		return nil, err
-	}
-	if err := ewmh.WmDesktopSet(X, bar.win.Id, ^uint(0)); err != nil {
-		return nil, err
-	}
-	if err := ewmh.WmNameSet(X, bar.win.Id, "melonbar"); err != nil {
+	if err := initEWMH(bar.win.Id); err != nil {
 		return nil, err
 	}
 

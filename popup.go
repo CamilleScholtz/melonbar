@@ -4,7 +4,6 @@ import (
 	"image"
 
 	"github.com/BurntSushi/xgb/xproto"
-	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
 	"golang.org/x/image/font"
@@ -40,21 +39,7 @@ func initPopup(x, y, w, h int, bg, fg string) (*Popup, error) {
 		CwEventMask, 0x000000, xproto.EventMaskButtonPress)
 
 	// EWMH stuff.
-	// TODO: `WmStateSet` and `WmDesktopSet` are basically here to keep OpenBox
-	// happy, can I somehow remove them and just use `_NET_WM_WINDOW_TYPE_DOCK`
-	// like I can with WindowChef?
-	if err := ewmh.WmWindowTypeSet(X, popup.win.Id, []string{
-		"_NET_WM_WINDOW_TYPE_DOCK"}); err != nil {
-		return nil, err
-	}
-	if err := ewmh.WmStateSet(X, popup.win.Id, []string{
-		"_NET_WM_STATE_STICKY"}); err != nil {
-		return nil, err
-	}
-	if err := ewmh.WmDesktopSet(X, popup.win.Id, ^uint(0)); err != nil {
-		return nil, err
-	}
-	if err := ewmh.WmNameSet(X, popup.win.Id, "melonbar"); err != nil {
+	if err := initEWMH(popup.win.Id); err != nil {
 		return nil, err
 	}
 
