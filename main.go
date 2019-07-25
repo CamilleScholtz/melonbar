@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
+	"github.com/AndreKR/multiface"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/gobuffalo/packr/v2"
-	"golang.org/x/image/font"
 )
 
 var (
@@ -14,8 +14,8 @@ var (
 	// Connection to the X server.
 	X *xgbutil.XUtil
 
-	// The font face that should be used.
-	face font.Face
+	// The multifont face that should be used.
+	face *multiface.Face
 )
 
 func main() {

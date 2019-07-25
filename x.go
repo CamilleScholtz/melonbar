@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/AndreKR/multiface"
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
@@ -44,6 +45,8 @@ func initEWMH(w xproto.Window) error {
 }
 
 func initFace() error {
+	face = new(multiface.Face)
+
 	fp, err := box.Find("fonts/cure.punpun.bdf")
 	if err != nil {
 		return err
@@ -52,7 +55,27 @@ func initFace() error {
 	if err != nil {
 		return err
 	}
-	face = f.NewFace()
+	face.AddFace(f.NewFace())
+
+	fp, err = box.Find("fonts/kochi.small.bdf")
+	if err != nil {
+		return err
+	}
+	f, err = bdf.Parse(fp)
+	if err != nil {
+		return err
+	}
+	face.AddFace(f.NewFace())
+
+	fp, err = box.Find("fonts/baekmuk.small.bdf")
+	if err != nil {
+		return err
+	}
+	f, err = bdf.Parse(fp)
+	if err != nil {
+		return err
+	}
+	face.AddFace(f.NewFace())
 
 	return nil
 }
