@@ -95,7 +95,7 @@ func initBar(x, y, w, h int) (*Bar, error) {
 
 			// XXX: Hack for music block.
 			if name == "music" {
-				tw := font.MeasureString(face, block.txt).Ceil()
+				tw := font.MeasureString(face, block.txt).Round()
 				if ev.EventX >= int16(block.x+(block.w-tw+(block.xoff*2))) &&
 					ev.EventX < int16(block.x+block.w) {
 					return false
@@ -138,7 +138,7 @@ func initBar(x, y, w, h int) (*Bar, error) {
 func (bar *Bar) draw(block *Block) error {
 	// Calculate the required x coordinate for the different aligments.
 	var x int
-	tw := bar.drawer.MeasureString(block.txt).Ceil()
+	tw := bar.drawer.MeasureString(block.txt).Round()
 	switch block.align {
 	case 'l':
 		x = block.x
@@ -152,6 +152,7 @@ func (bar *Bar) draw(block *Block) error {
 		return fmt.Errorf("draw %#U: Not a valid aligment rune", block.align)
 	}
 	x += block.xoff
+	x += 2
 
 	// Color the background.
 	block.img.For(func(cx, cy int) xgraphics.BGRA {
@@ -170,7 +171,7 @@ func (bar *Bar) draw(block *Block) error {
 	bar.drawer.Src = image.NewUniform(hexToBGRA(block.fg))
 
 	// Draw the text.
-	bar.drawer.Dot = fixed.P(x, 18)
+	bar.drawer.Dot = fixed.P(x, 16)
 	bar.drawer.DrawString(block.txt)
 
 	// Redraw the bar.

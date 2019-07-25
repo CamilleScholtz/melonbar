@@ -56,7 +56,7 @@ func (bar *Bar) clock() {
 
 func (bar *Bar) music() {
 	// Initialize block.
-	block := bar.initBlock("music", "»  ", 660, 'r', -12, "#3C4F5B", "#CCCCCC")
+	block := bar.initBlock("music", " Ƅ  ", 660, 'r', -12, "#3C4F5B", "#CCCCCC")
 
 	// Notify that the next block can be initialized.
 	bar.ready <- true
@@ -137,7 +137,7 @@ func (bar *Bar) music() {
 		if sts["state"] == "pause" {
 			s = "[paused] "
 		}
-		txt := "»      " + s + cur["Artist"] + " - " + cur["Title"]
+		txt := " Ƅ  " + s + cur["Artist"] + " - " + cur["Title"]
 
 		// Redraw block.
 		if block.diff(txt) {
@@ -157,7 +157,7 @@ func (bar *Bar) music() {
 
 func (bar *Bar) todo() {
 	// Initialize block.
-	block := bar.initBlock("todo", "¢", bar.h, 'c', 0, "#5394C9", "#FFFFFF")
+	block := bar.initBlock("todo", "ƅ", bar.h, 'c', 1, "#5394C9", "#FFFFFF")
 
 	// Notify that the next block can be initialized.
 	bar.ready <- true
@@ -184,7 +184,7 @@ func (bar *Bar) todo() {
 
 func (bar *Bar) window() {
 	// Initialize blocks.
-	bar.initBlock("windowIcon", "¶", 21, 'l', 12, "#37BF8D", "#FFFFFF")
+	bar.initBlock("windowIcon", "ƀ", 21, 'r', 3, "#37BF8D", "#FFFFFF")
 	block := bar.initBlock("window", "?", 200, 'c', 0, "#37BF8D", "#FFFFFF")
 
 	// Notify that the next block can be initialized.
@@ -230,11 +230,11 @@ func (bar *Bar) window() {
 
 func (bar *Bar) workspace() {
 	// Initialize block.
-	blockWWW := bar.initBlock("www", "¼      www", 74, 'l', 10, "#5394C9",
+	blockWWW := bar.initBlock("www", "Ɓ   www", 74, 'l', 12, "#5394C9",
 		"#FFFFFF")
-	blockIRC := bar.initBlock("irc", "½      irc", 67, 'l', 10, "#5394C9",
+	blockIRC := bar.initBlock("irc", "Ƃ   irc", 67, 'l', 12, "#5394C9",
 		"#FFFFFF")
-	blockSRC := bar.initBlock("src", "¾      src", 70, 'l', 10, "#5394C9",
+	blockSRC := bar.initBlock("src", "ƃ   src", 70, 'l', 12, "#5394C9",
 		"#FFFFFF")
 
 	// Notify that the next block can be initialized.

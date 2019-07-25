@@ -1,14 +1,12 @@
 package main
 
 import (
-	"path"
-
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xwindow"
-	"golang.org/x/image/font/plan9font"
+	"github.com/zachomedia/go-bdf"
 )
 
 func initX() error {
@@ -45,18 +43,16 @@ func initEWMH(w xproto.Window) error {
 	return ewmh.WmNameSet(X, w, "melonbar")
 }
 
-func initFont() error {
-	fr := func(name string) ([]byte, error) {
-		return box.Find(path.Join("fonts", name))
-	}
-	fp, err := box.Find("fonts/cure.font")
+func initFace() error {
+	fp, err := box.Find("fonts/cure.punpun.bdf")
 	if err != nil {
 		return err
 	}
-	face, err = plan9font.ParseFont(fp, fr)
+	f, err := bdf.Parse(fp)
 	if err != nil {
 		return err
 	}
+	face = f.NewFace()
 
 	return nil
 }

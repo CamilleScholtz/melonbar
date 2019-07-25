@@ -14,7 +14,7 @@ var (
 	// Connection to the X server.
 	X *xgbutil.XUtil
 
-	// The font that should be used.
+	// The font face that should be used.
 	face font.Face
 )
 
@@ -24,8 +24,8 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// Initialize font.
-	if err := initFont(); err != nil {
+	// Initialize font face.
+	if err := initFace(); err != nil {
 		log.Fatalln(err)
 	}
 
