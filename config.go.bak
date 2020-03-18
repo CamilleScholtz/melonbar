@@ -1,0 +1,28 @@
+package main
+
+var blocks = []*Block{
+	&Block{
+		txt:   "foo",
+		w:     10,
+		align: 'r',
+		xoff:  2,
+		bg:    "#445967",
+		fg:    "#CCCCCC",
+		actions: map[string]func() error{
+			"button1": func() error { return foo() },
+			"button2": func() error { return bar() },
+		},
+	},
+	&Block{
+		txt:   "biz",
+		w:     15,
+		align: 'a',
+		xoff:  0,
+		bg:    "#3C4F5B",
+		fg:    "#CCCCCC",
+		actions: map[string]func() error{
+			"button1": func() error { return foo() },
+			"button2": func() error { return bar() },
+		},
+	},
+}

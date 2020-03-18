@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/icccm"
+	"github.com/BurntSushi/xgbutil/keybind"
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xprop"
 	"github.com/fhs/gompd/mpd"
@@ -24,7 +26,7 @@ func (bar *Bar) clock() {
 	bar.ready <- true
 
 	// Show popup on clicking the left mouse button.
-	block.actions["button1"] = func() error {
+	block.actions[1] = func() error {
 		if block.popup != nil {
 			block.popup = block.popup.destroy()
 			return nil
@@ -82,7 +84,7 @@ func (bar *Bar) music() {
 	}()
 
 	// Show popup on clicking the left mouse button.
-	block.actions["button1"] = func() error {
+	block.actions[2] = func() error {
 		if block.popup != nil {
 			block.popup = block.popup.destroy()
 			return nil
@@ -98,7 +100,7 @@ func (bar *Bar) music() {
 	}
 
 	// Toggle play/pause on clicking the right mouse button.
-	block.actions["button3"] = func() error {
+	block.actions[3] = func() error {
 		status, err := c.Status()
 		if err != nil {
 			return err
@@ -108,12 +110,12 @@ func (bar *Bar) music() {
 	}
 
 	// Previous song on scrolling up.
-	block.actions["button4"] = func() error {
+	block.actions[4] = func() error {
 		return c.Previous()
 	}
 
 	// Next song on on scrolling down..
-	block.actions["button5"] = func() error {
+	block.actions[5] = func() error {
 		return c.Next()
 	}
 
@@ -163,7 +165,7 @@ func (bar *Bar) todo() {
 	bar.ready <- true
 
 	// Show popup on clicking the left mouse button.
-	block.actions["button1"] = func() error {
+	block.actions[1] = func() error {
 		cmd := exec.Command("st", "micro", "-savecursor", "false", path.Join(
 			basedir.Home, ".todo"))
 		cmd.Stdout = os.Stdout
@@ -189,6 +191,36 @@ func (bar *Bar) window() {
 
 	// Notify that the next block can be initialized.
 	bar.ready <- true
+
+	// Enable input on clicking the left mouse button.
+	block.actions[1] = func() error {
+		str := ""
+
+		xevent.KeyPressFun(func(_ *xgbutil.XUtil, ev xevent.KeyPressEvent) {
+			k := keybind.LookupString(X, ev.State, ev.Detail)
+			// TODO: Is there a better way to ignore modifiers?
+			if len(k) == 1 {
+				str += k
+			}
+
+			if keybind.KeyMatch(X, "Return", ev.State, ev.Detail) {
+				keybind.SmartUngrab(X)
+
+				fmt.Println(str)
+
+				cmd := exec.Command(str)
+				cmd.Stdout = os.Stdout
+				// TODO: Return this in the super function.
+				cmd.Run()
+			}
+		}).Connect(X, bar.win.Id)
+
+		if err := keybind.SmartGrab(X, bar.win.Id); err != nil {
+			log.Println(err)
+		}
+
+		return nil
+	}
 
 	// TODO: This doesn't check for window title changes.
 	xevent.PropertyNotifyFun(func(_ *xgbutil.XUtil, ev xevent.
@@ -241,13 +273,13 @@ func (bar *Bar) workspace() {
 	bar.ready <- true
 
 	// Change active workspace on clicking on one of the blocks.
-	blockWWW.actions["button1"] = func() error {
+	blockWWW.actions[1] = func() error {
 		return ewmh.CurrentDesktopReq(X, 0)
 	}
-	blockIRC.actions["button1"] = func() error {
+	blockIRC.actions[1] = func() error {
 		return ewmh.CurrentDesktopReq(X, 1)
 	}
-	blockSRC.actions["button1"] = func() error {
+	blockSRC.actions[1] = func() error {
 		return ewmh.CurrentDesktopReq(X, 2)
 	}
 
@@ -311,10 +343,10 @@ func (bar *Bar) workspace() {
 		return ewmh.CurrentDesktopReq(X, nwsp)
 	}
 
-	blockWWW.actions["button4"] = prevFun
-	blockWWW.actions["button5"] = nextFun
-	blockIRC.actions["button4"] = prevFun
-	blockIRC.actions["button5"] = nextFun
-	blockSRC.actions["button4"] = prevFun
-	blockSRC.actions["button5"] = nextFun
+	blockWWW.actions[4] = prevFun
+	blockWWW.actions[5] = nextFun
+	blockIRC.actions[4] = prevFun
+	blockIRC.actions[5] = nextFun
+	blockSRC.actions[4] = prevFun
+	blockSRC.actions[5] = nextFun
 }

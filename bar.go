@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"image"
 	"log"
-	"strconv"
 	"sync"
 
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
+	"github.com/BurntSushi/xgbutil/keybind"
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
@@ -124,13 +124,15 @@ func initBar(x, y, w, h int) (*Bar, error) {
 		})
 
 		// Execute the function as specified.
-		if block != nil {
-			if err := block.actions["button"+strconv.Itoa(int(ev.
-				Detail))](); err != nil {
+		if _, ok := block.actions[ev.Detail]; ok {
+			if err := block.actions[ev.Detail](); err != nil {
 				log.Println(err)
 			}
 		}
 	}).Connect(X, bar.win.Id)
+
+	// Initialize keybind package, needed to grab key press events.
+	keybind.Initialize(X)
 
 	return bar, nil
 }

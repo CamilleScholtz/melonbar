@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 
+	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 )
 
@@ -28,11 +29,10 @@ type Block struct {
 	// The foreground and background colors in hex.
 	bg, fg string
 
-	// A map with functions to execute on button events. Accepted button strings
-	// are `button0` to `button5`
-	actions map[string]func() error
+	// A map with functions to execute on button events.
+	actions map[xproto.Button]func() error
 
-	// Block popup..
+	// Block popup.
 	popup *Popup
 }
 
@@ -49,13 +49,7 @@ func (bar *Bar) initBlock(name, txt string, w int, align rune, xoff int, bg,
 	block.align = align
 	block.bg = bg
 	block.fg = fg
-	block.actions = map[string]func() error{
-		"button1": func() error { return nil },
-		"button2": func() error { return nil },
-		"button3": func() error { return nil },
-		"button4": func() error { return nil },
-		"button5": func() error { return nil },
-	}
+	block.actions = map[xproto.Button]func() error{}
 
 	// Add the width of this block to the xsum.
 	bar.xsum += w
