@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"image"
 	"log"
-	"sync"
 
 	"github.com/BurntSushi/xgb/xproto"
-	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/keybind"
-	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
+	"github.com/elliotchance/orderedmap"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
@@ -32,16 +30,19 @@ type Bar struct {
 	// Text drawer.
 	drawer *font.Drawer
 
-	// A map with information about the block, see the `Block` type.
-	blocks *sync.Map
+	// A map that stores the various blocks.
+	blocks *orderedmap.OrderedMap
+
+	// A map that stores the various popups.
+	popups *orderedmap.OrderedMap
+
+	// Store is an interface to store variables and objects to be used by other
+	// blocks or popups.
+	store map[string]interface{}
 
 	// A channel where the block should be send to to once its ready to be
 	// redrawn.
 	redraw chan *Block
-
-	// A channel where a boolean should be send once a block has initizalized,
-	// notifying that the next block can intialize.
-	ready chan bool
 }
 
 func initBar(x, y, w, h int) (*Bar, error) {
@@ -75,63 +76,28 @@ func initBar(x, y, w, h int) (*Bar, error) {
 	}
 	bar.img.XDraw()
 
+	// Set bar width and height.
 	bar.w = w
 	bar.h = h
 
+	// Set bar font face.
 	bar.drawer = &font.Drawer{
 		Dst:  bar.img,
 		Face: face,
 	}
 
-	bar.blocks = new(sync.Map)
+	// Creat blocks and popups map.
+	bar.blocks = orderedmap.NewOrderedMap()
+	bar.popups = orderedmap.NewOrderedMap()
+
+	// Create store map.
+	bar.store = make(map[string]interface{})
+
+	// Create redraw channel.
 	bar.redraw = make(chan *Block)
 
-	// Listen to mouse events and execute the required function.
-	xevent.ButtonPressFun(func(_ *xgbutil.XUtil, ev xevent.ButtonPressEvent) {
-		// Determine what block the cursor is in.
-		var block *Block
-		bar.blocks.Range(func(name, i interface{}) bool {
-			block = i.(*Block)
-
-			// XXX: Hack for music block.
-			if name == "music" {
-				tw := font.MeasureString(face, block.txt).Round()
-				if ev.EventX >= int16(block.x+(block.w-tw+(block.xoff*2))) &&
-					ev.EventX < int16(block.x+block.w) {
-					return false
-				}
-				block = nil
-				return true
-			}
-
-			// XXX: Hack for clock block.
-			if name == "clock" {
-				tw := bar.drawer.MeasureString(block.txt).Ceil()
-				if ev.EventX >= int16(((bar.w/2)-(tw/2))-13) && ev.
-					EventX < int16(((bar.w/2)+(tw/2))+13) {
-					return false
-				}
-				block = nil
-				return true
-			}
-
-			if ev.EventX >= int16(block.x) && ev.EventX < int16(block.x+block.
-				w) {
-				return false
-			}
-			block = nil
-			return true
-		})
-
-		// Execute the function as specified.
-		if _, ok := block.actions[ev.Detail]; ok {
-			if err := block.actions[ev.Detail](); err != nil {
-				log.Println(err)
-			}
-		}
-	}).Connect(X, bar.win.Id)
-
 	// Initialize keybind package, needed to grab key press events.
+	// TODO: Is this needed?
 	keybind.Initialize(X)
 
 	return bar, nil
@@ -161,16 +127,15 @@ func (bar *Bar) draw(block *Block) error {
 		// XXX: Hack for music block.
 		if block.w == 660 {
 			if cx < x+block.xoff {
-				return hexToBGRA("#445967")
+				return xgraphics.BGRA{B: 103, G: 89, R: 68, A: 0xFF}
 			}
-			return hexToBGRA(block.bg)
 		}
 
-		return hexToBGRA(block.bg)
+		return block.bg
 	})
 
-	// Set text color.
-	bar.drawer.Src = image.NewUniform(hexToBGRA(block.fg))
+	// Set foreground color.
+	bar.drawer.Src = image.NewUniform(block.fg)
 
 	// Draw the text.
 	bar.drawer.Dot = fixed.P(x, 16)
@@ -181,17 +146,6 @@ func (bar *Bar) draw(block *Block) error {
 	bar.img.XPaint(bar.win.Id)
 
 	return nil
-}
-
-func (bar *Bar) initBlocks(blocks []func()) {
-	bar.ready = make(chan bool)
-
-	for _, f := range blocks {
-		go f()
-		<-bar.ready
-	}
-
-	close(bar.ready)
 }
 
 func (bar *Bar) listen() {

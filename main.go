@@ -35,14 +35,12 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// Initialize blocks.
-	go bar.initBlocks([]func(){
-		bar.window,
-		bar.workspace,
-		bar.clock,
-		bar.music,
-		bar.todo,
-	})
+	// Initialize blocks and popups.
+	bar.initBlocks()
+	bar.initPopups()
+
+	// Draw blocks.
+	go bar.drawBlocks()
 
 	// Listen for redraw events.
 	bar.listen()
