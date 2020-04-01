@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/BurntSushi/xgb/xproto"
-	"github.com/BurntSushi/xgbutil/keybind"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xwindow"
 	"github.com/elliotchance/orderedmap"
@@ -95,10 +94,6 @@ func initBar(x, y, w, h int) (*Bar, error) {
 
 	// Create redraw channel.
 	bar.redraw = make(chan *Block)
-
-	// Initialize keybind package, needed to grab key press events.
-	// TODO: Is this needed?
-	keybind.Initialize(X)
 
 	return bar, nil
 }
