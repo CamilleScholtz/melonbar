@@ -134,8 +134,7 @@ func (bar *Bar) initPopups() {
 				set nokey;
 				set notics;
 				set notitle;
-				set style fill solid border rgb '#5394C9';
-				plot '`+td.Name()+`' smooth csplines with filledcurve lc rgb '#72A7D3';
+				plot '`+td.Name()+`' smooth csplines w filledcu x1 fc rgb '#72A7D3', '`+td.Name()+`' smooth csplines w line lc rgb '#5394C9';
 			`)
 			if err := cmd.Run(); err != nil {
 				log.Println(err)
@@ -149,7 +148,7 @@ func (bar *Bar) initPopups() {
 				return
 			}
 			xgraphics.Blend(popup.img, xgraphics.NewConvert(X, img), image.
-				Point{11, 3})
+				Point{11, 2})
 
 			// Redraw the popup.
 			popup.draw()
@@ -180,9 +179,6 @@ func (bar *Bar) initPopups() {
 			popup.img.For(func(cx, cy int) xgraphics.BGRA {
 				return xgraphics.BGRA{B: 238, G: 238, R: 238, A: 0xFF}
 			})
-
-			// Redraw the popup.
-			popup.draw()
 
 			// Set foreground color.
 			popup.drawer.Src = image.NewUniform(xgraphics.BGRA{B: 33, G: 27,
