@@ -34,7 +34,7 @@ func (bar *Bar) initPopups() {
 			popup := bar.popup("clock")
 
 			// Color the background.
-			f, err := box.Open("images/clock-popup-bg.png")
+			f, err := runtime.Open("/images/clock-popup-bg.png")
 			if err != nil {
 				log.Println(err)
 				return

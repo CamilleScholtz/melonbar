@@ -5,11 +5,11 @@ import (
 
 	"github.com/AndreKR/multiface"
 	"github.com/BurntSushi/xgbutil"
-	"github.com/gobuffalo/packr/v2"
+	"github.com/markbates/pkger"
 )
 
 var (
-	box = packr.New("box", "./box")
+	runtime = pkger.Dir("/runtime")
 
 	// Connection to the X server.
 	X *xgbutil.XUtil
