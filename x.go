@@ -2,8 +2,10 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
 
 	"github.com/AndreKR/multiface"
+	"github.com/BurntSushi/xgb"
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
@@ -13,6 +15,9 @@ import (
 )
 
 func initX() error {
+	// Disable logging messages.
+	xgb.Logger = log.New(ioutil.Discard, "", 0)
+
 	// Set up a connection to the X server.
 	var err error
 	X, err = xgbutil.NewConn()
