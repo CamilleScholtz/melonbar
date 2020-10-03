@@ -141,8 +141,8 @@ func (bar *Bar) initPopups() {
 				if p.Next() == nil && !np {
 					tm = true
 
-					pom.Delete(prayer.Fajr)
-					pom.Set(prayer.Fajr, pm[prayer.Fajr])
+					pom.Delete("Fajr")
+					pom.Set("Fajr", pm[prayer.Fajr])
 				}
 
 				// Draw arrow.
