@@ -2,14 +2,15 @@ package main
 
 import (
 	"log"
+	"embed"
 
 	"github.com/AndreKR/multiface"
 	"github.com/BurntSushi/xgbutil"
-	"github.com/markbates/pkger"
 )
 
 var (
-	runtime = pkger.Dir("/runtime")
+	//go:embed runtime/*
+	runtime embed.FS
 
 	// Connection to the X server.
 	X *xgbutil.XUtil

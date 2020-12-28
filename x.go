@@ -55,17 +55,13 @@ func initFace() error {
 	face = new(multiface.Face)
 
 	fpl := []string{
-		"/fonts/cure.punpun.bdf",
-		"/fonts/kochi.small.bdf",
-		"/fonts/baekmuk.small.bdf",
+		"runtime/fonts/cure.punpun.bdf",
+		"runtime/fonts/kochi.small.bdf",
+		"runtime/fonts/baekmuk.small.bdf",
 	}
 
 	for _, fp := range fpl {
-		f, err := runtime.Open(fp)
-		if err != nil {
-			return err
-		}
-		fb, err := ioutil.ReadAll(f)
+		fb, err := runtime.ReadFile(fp)
 		if err != nil {
 			return err
 		}
@@ -75,8 +71,6 @@ func initFace() error {
 		}
 
 		face.AddFace(ff.NewFace())
-
-		f.Close()
 	}
 
 	return nil
